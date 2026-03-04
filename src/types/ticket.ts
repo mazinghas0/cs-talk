@@ -16,10 +16,13 @@ export interface Ticket {
 export interface Message {
     id: string;
     ticket_id: string;
-    user_id: string;
+    sender_id: string;
     content: string;
-    is_internal_note: boolean;
+    is_internal: boolean;
     is_resolution: boolean;
     created_at: string;
     thread_parent_id?: string;
+    profiles?: {
+        full_name: string;
+    };
 }
