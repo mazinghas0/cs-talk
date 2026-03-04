@@ -160,8 +160,8 @@ export const ChatArea: React.FC = () => {
                 </div>
 
                 {messages.map((msg) => {
-                    const isMe = msg.sender_id === user?.id;
-                    const isInternalMsg = msg.is_internal;
+                    const isMe = msg.user_id === user?.id;
+                    const isInternalMsg = msg.is_internal_note;
 
                     if (isInternalMsg) {
                         return (

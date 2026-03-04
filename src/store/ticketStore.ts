@@ -127,7 +127,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     fetchMessages: async (ticketId) => {
         const { data, error } = await supabase
             .from('messages')
-            .select(`*, profiles:sender_id(full_name)`)
+            .select(`*, profiles:user_id(full_name)`)
             .eq('ticket_id', ticketId)
             .order('created_at', { ascending: true });
 
@@ -142,9 +142,9 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         const { data, error } = await supabase
             .from('messages')
             .insert([
-                { ticket_id: ticketId, sender_id: userId, content, is_internal_note: isInternal, image_url: imageUrl }
+                { ticket_id: ticketId, user_id: userId, content, is_internal_note: isInternal, image_url: imageUrl }
             ])
-            .select(`*, profiles:sender_id(full_name)`)
+            .select(`*, profiles:user_id(full_name)`)
             .single();
 
         if (error) {
@@ -153,7 +153,11 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         }
 
         if (data) {
-            set((state) => ({ messages: [...state.messages, data as any] }));
+            set((state) => {
+                // Prevent duplicate if already added by real-time
+                if (state.messages.find(m => m.id === data.id)) return state;
+                return { messages: [...state.messages, data as any] };
+            });
         }
     },
 
@@ -220,7 +224,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 if (newMessage.ticket_id === get().selectedTicketId) {
                     const { data, error } = await supabase
                         .from('messages')
-                        .select(`*, profiles:sender_id(full_name)`)
+                        .select(`*, profiles:user_id(full_name)`)
                         .eq('id', newMessage.id)
                         .single();
 

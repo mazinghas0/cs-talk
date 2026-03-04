@@ -18,9 +18,9 @@ export interface Ticket {
 export interface Message {
     id: string;
     ticket_id: string;
-    sender_id: string;
+    user_id: string;
     content: string;
-    is_internal: boolean;
+    is_internal_note: boolean;
     is_resolution: boolean;
     image_url?: string;
     created_at: string;
