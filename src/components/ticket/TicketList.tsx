@@ -1,27 +1,64 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './TicketList.css';
+import './TicketModal.css';
 import { useTicketStore } from '../../store/ticketStore';
 import { TicketTabs } from './TicketTabs';
-import { Clock } from 'lucide-react';
+import { Clock, Plus, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { useAuthStore } from '../../store/authStore';
+import { TicketPriority } from '../../types/ticket';
 
 export const TicketList: React.FC = () => {
-    const { tickets, activeTab, selectedTicketId, setSelectedTicketId } = useTicketStore();
+    const { tickets, activeTab, selectedTicketId, setSelectedTicketId, fetchTickets, createTicket, isLoadingData } = useTicketStore();
+    const { user } = useAuthStore();
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [newTitle, setNewTitle] = useState('');
+    const [newDesc, setNewDesc] = useState('');
+    const [newPriority, setNewPriority] = useState<TicketPriority>('medium');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        fetchTickets();
+    }, [fetchTickets]);
 
     // Filter tickets by active tab
     const filteredTickets = tickets.filter(t => t.status === activeTab);
+
+    const handleCreateSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user || !newTitle.trim() || !newDesc.trim()) return;
+
+        setIsSubmitting(true);
+        try {
+            await createTicket(newTitle, newDesc, newPriority, user.id);
+            setIsModalOpen(false);
+            setNewTitle('');
+            setNewDesc('');
+            setNewPriority('medium');
+        } catch (err) {
+            alert('티켓 생성 실패. 다시 시도해주세요.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     return (
         <div className="ticket-list-container">
             <div className="ticket-list-header">
                 <h2 className="title">업무 요청</h2>
+                <button className="icon-btn-create" onClick={() => setIsModalOpen(true)}>
+                    <Plus size={20} />
+                </button>
             </div>
 
             <TicketTabs />
 
             <div className="ticket-list-body">
-                {filteredTickets.length === 0 ? (
+                {isLoadingData ? (
+                    <div className="empty-state">데이터를 불러오는 중...</div>
+                ) : filteredTickets.length === 0 ? (
                     <div className="empty-state">해당 상태의 티켓이 없습니다.</div>
                 ) : (
                     filteredTickets.map(ticket => (
@@ -45,6 +82,58 @@ export const TicketList: React.FC = () => {
                     ))
                 )}
             </div>
+
+            {/* New Ticket Modal */}
+            {isModalOpen && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h3>새 요청 등록</h3>
+                            <button className="icon-btn-close" onClick={() => setIsModalOpen(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleCreateSubmit} className="modal-form">
+                            <div className="form-group">
+                                <label>요청 제목</label>
+                                <input
+                                    type="text"
+                                    value={newTitle}
+                                    onChange={(e) => setNewTitle(e.target.value)}
+                                    placeholder="무엇을 도와드릴까요?"
+                                    required
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>우선 순위</label>
+                                <select value={newPriority} onChange={(e) => setNewPriority(e.target.value as TicketPriority)}>
+                                    <option value="low">낮음 (여유 시 처리)</option>
+                                    <option value="medium">보통 (일반 요청)</option>
+                                    <option value="high">높음 (빠른 처리 요망)</option>
+                                    <option value="urgent">긴급 (즉시 처리 및 장애)</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>상세 내용</label>
+                                <textarea
+                                    value={newDesc}
+                                    onChange={(e) => setNewDesc(e.target.value)}
+                                    placeholder="상세한 요청 내용이나 오류 상황을 적어주세요."
+                                    rows={4}
+                                    required
+                                />
+                            </div>
+                            <div className="modal-actions">
+                                <button type="button" className="btn-cancel" onClick={() => setIsModalOpen(false)}>취소</button>
+                                <button type="submit" className="btn-submit" disabled={isSubmitting}>
+                                    {isSubmitting ? '등록 중...' : '등록하기'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
