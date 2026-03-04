@@ -135,3 +135,13 @@ USING ( bucket_id = 'attachments' );
 CREATE POLICY "Authenticated Users Upload Access"
 ON storage.objects FOR INSERT
 WITH CHECK ( bucket_id = 'attachments' AND auth.role() = 'authenticated' );
+
+-- ==============================================
+-- 6. Backfill Existing Users (Fix for Foreign Key Error)
+-- ==============================================
+-- If the profiles table was dropped and recreated, but auth.users still exists,
+-- this will sync existing users back into the newly created profiles table 
+-- so that foreign key constraints on 'requesting_user_id' do not fail.
+INSERT INTO public.profiles (id, email)
+SELECT id, email FROM auth.users
+ON CONFLICT (id) DO NOTHING;
