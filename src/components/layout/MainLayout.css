@@ -1,0 +1,70 @@
+.layout-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    /* subtle dynamic background gradient */
+    background-image:
+        radial-gradient(circle at top right, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+}
+
+/* Leftmost Sidebar (Navigation) */
+.pane-sidebar {
+    width: var(--sidebar-width);
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-right: 1px solid var(--glass-border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem 0;
+    z-index: 10;
+}
+
+/* Middle List (Tickets / Chat rooms) */
+.pane-list {
+    width: var(--list-width);
+    background: rgba(20, 20, 20, 0.8);
+    backdrop-filter: blur(8px);
+    border-right: 1px solid var(--glass-border);
+    display: flex;
+    flex-direction: column;
+    z-index: 9;
+}
+
+/* Right Content (Chat interface) */
+.pane-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+    position: relative;
+}
+
+@media (max-width: 768px) {
+    .layout-container {
+        flex-direction: column-reverse;
+        /* For bottom tab bar */
+    }
+
+    .pane-sidebar {
+        width: 100%;
+        height: 64px;
+        flex-direction: row;
+        justify-content: space-around;
+        border-right: none;
+        border-top: 1px solid var(--glass-border);
+        padding: 0;
+    }
+
+    .pane-list {
+        width: 100%;
+        flex: 1;
+    }
+
+    .pane-content {
+        display: none;
+        /* In mobile, usually only one pane is visible at a time */
+    }
+}
