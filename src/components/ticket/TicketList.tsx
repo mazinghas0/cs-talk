@@ -10,7 +10,7 @@ import { useAuthStore } from '../../store/authStore';
 import { TicketPriority } from '../../types/ticket';
 
 export const TicketList: React.FC = () => {
-    const { tickets, activeTab, selectedTicketId, setSelectedTicketId, fetchTickets, createTicket, isLoadingData } = useTicketStore();
+    const { tickets, activeTab, selectedTicketId, setSelectedTicketId, fetchTickets, createTicket, isLoadingData, unreadCounts } = useTicketStore();
     const { user } = useAuthStore();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -82,6 +82,9 @@ export const TicketList: React.FC = () => {
                                     <Clock size={12} />
                                     {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true, locale: ko })}
                                 </span>
+                                {unreadCounts[ticket.id] > 0 && (
+                                    <span className="unread-badge">{unreadCounts[ticket.id]}</span>
+                                )}
                             </div>
                             <h3 className="ticket-title">{ticket.title}</h3>
                             <p className="ticket-desc">{ticket.description}</p>

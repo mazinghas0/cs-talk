@@ -12,9 +12,12 @@ interface TicketStore {
     selectedTicketId: string | null;
     isLoadingData: boolean;
     isSubscribed: boolean;
+    unreadCounts: Record<string, number>;
 
     // Actions
     fetchTickets: () => Promise<void>;
+    fetchUnreadCounts: () => Promise<void>;
+    markAsRead: (ticketId: string) => Promise<void>;
     createTicket: (title: string, description: string, priority: TicketPriority, userId: string, imageUrl?: string) => Promise<void>;
     updateTicketStatus: (id: string, status: TicketStatus) => Promise<void>;
     deleteTicket: (id: string) => Promise<void>;
@@ -39,6 +42,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     selectedTicketId: null,
     isLoadingData: false,
     isSubscribed: false,
+    unreadCounts: {},
 
     fetchTickets: async () => {
         set({ isLoadingData: true });
@@ -53,6 +57,62 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
             set({ tickets: data as Ticket[] });
         }
         set({ isLoadingData: false });
+        await get().fetchUnreadCounts();
+    },
+
+    fetchUnreadCounts: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // 1. Get last read times
+        const { data: readData } = await supabase
+            .from('profiles_tickets_reads')
+            .select('ticket_id, last_read_at')
+            .eq('profile_id', user.id);
+
+        const readMap: Record<string, string> = {};
+        readData?.forEach(r => readMap[r.ticket_id] = r.last_read_at);
+
+        // 2. Count messages after last read for each ticket
+        const counts: Record<string, number> = {};
+        const tickets = get().tickets;
+
+        for (const ticket of tickets) {
+            const lastRead = readMap[ticket.id] || '1970-01-01T00:00:00Z';
+            const { count, error } = await supabase
+                .from('messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('ticket_id', ticket.id)
+                .gt('created_at', lastRead);
+
+            if (!error) {
+                counts[ticket.id] = count || 0;
+            }
+        }
+
+        set({ unreadCounts: counts });
+    },
+
+    markAsRead: async (ticketId) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const now = new Date().toISOString();
+
+        // Optimistic update
+        set((state) => ({
+            unreadCounts: { ...state.unreadCounts, [ticketId]: 0 }
+        }));
+
+        const { error } = await supabase
+            .from('profiles_tickets_reads')
+            .upsert({
+                profile_id: user.id,
+                ticket_id: ticketId,
+                last_read_at: now
+            }, { onConflict: 'profile_id,ticket_id' });
+
+        if (error) console.error('Error marking as read:', error);
     },
 
     createTicket: async (title, description, priority, userId, imageUrl) => {
@@ -71,8 +131,8 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
 
         if (data) {
             set((state) => {
-                // Prevent duplicate if already added by real-time sync
-                if (state.tickets.some(t => t.id === data.id)) return state;
+                const isDuplicate = state.tickets.some(t => t.id === data.id);
+                if (isDuplicate) return state;
                 return { tickets: [data as Ticket, ...state.tickets] };
             });
         }
@@ -193,13 +253,12 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         set({ selectedTicketId });
         if (selectedTicketId) {
             get().fetchMessages(selectedTicketId);
+            get().markAsRead(selectedTicketId);
         }
     },
 
     subscribeToChanges: () => {
-        if (get().isSubscribed) {
-            return () => { };
-        }
+        if (get().isSubscribed) return () => { };
 
         console.log('🔔 [Realtime] Subscribing...');
 
@@ -210,9 +269,10 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 const { eventType, new: newTicket, old: oldTicket } = payload;
 
                 if (eventType === 'INSERT') {
-                    set((state) => ({
-                        tickets: [newTicket as Ticket, ...state.tickets]
-                    }));
+                    set((state) => {
+                        if (state.tickets.some(t => t.id === newTicket.id)) return state;
+                        return { tickets: [newTicket as Ticket, ...state.tickets] };
+                    });
                 } else if (eventType === 'UPDATE') {
                     set((state) => ({
                         tickets: state.tickets.map(t => t.id === newTicket.id ? { ...t, ...newTicket } : t)
@@ -240,14 +300,31 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                             if (state.messages.some(m => m.id === data.id)) return state;
                             return { messages: [...state.messages, data] };
                         });
+                        // Viewing this ticket, so mark as read
+                        get().markAsRead(newMessage.ticket_id);
                     }
+                } else {
+                    // Not viewing, so increment unread count
+                    set((state) => ({
+                        unreadCounts: {
+                            ...state.unreadCounts,
+                            [newMessage.ticket_id]: (state.unreadCounts[newMessage.ticket_id] || 0) + 1
+                        }
+                    }));
+                }
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles_tickets_reads' }, async (payload) => {
+                const { new: newRead } = payload as any;
+                const { data: { user } } = await supabase.auth.getUser();
+                if (newRead && user && newRead.profile_id === user.id) {
+                    set((state) => ({
+                        unreadCounts: { ...state.unreadCounts, [newRead.ticket_id]: 0 }
+                    }));
                 }
             })
             .subscribe((status) => {
                 console.log('📡 [Realtime] Status:', status);
-                if (status === 'SUBSCRIBED') {
-                    set({ isSubscribed: true });
-                }
+                if (status === 'SUBSCRIBED') set({ isSubscribed: true });
             });
 
         return () => {

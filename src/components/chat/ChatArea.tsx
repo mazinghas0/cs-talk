@@ -2,11 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import './ChatArea.css';
 import { useTicketStore } from '../../store/ticketStore';
 import { useAuthStore } from '../../store/authStore';
-import { Send, FilePlus, MessageSquareWarning, Edit2, Trash2, X } from 'lucide-react';
+import { Send, FilePlus, MessageSquareWarning, Edit2, Trash2, X, ChevronLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
-export const ChatArea: React.FC = () => {
+interface ChatAreaProps {
+    onBack?: () => void;
+    showBack?: boolean;
+}
+
+export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
     const { tickets, selectedTicketId, messages, sendMessage, updateTicketStatus, deleteTicket, requestResolution, updateTicket } = useTicketStore();
     const { user } = useAuthStore();
     const ticket = tickets.find(t => t.id === selectedTicketId);
@@ -115,10 +120,15 @@ export const ChatArea: React.FC = () => {
     };
 
     return (
-        <div className="chat-area">
+        <div className={`chat-area ambient-${ticket.priority}`}>
             {/* Header */}
             <div className="chat-header">
                 <div className="chat-header-info">
+                    {showBack && (
+                        <button className="back-btn" onClick={onBack} aria-label="Go back">
+                            <ChevronLeft size={24} />
+                        </button>
+                    )}
                     <h2>{ticket.title}</h2>
                     <span className={`status-badge ${ticket.status}`}>
                         {ticket.status === 'in_progress' ? '진행중' : '처리완료'}

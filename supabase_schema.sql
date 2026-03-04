@@ -155,11 +155,34 @@ ON CONFLICT (id) DO NOTHING;
 ALTER TABLE tickets ADD COLUMN IF NOT EXISTS resolve_requested BOOLEAN DEFAULT FALSE NOT NULL;
 
 -- ==============================================
--- 8. Enable Realtime for Tables
+-- 8. Enable Realtime for Tables (Updated)
 -- ==============================================
--- Enable Realtime for tickets and messages to sync UI across users
 BEGIN;
-  -- Remove existing if any (to avoid error on re-run)
   DROP PUBLICATION IF EXISTS supabase_realtime;
   CREATE PUBLICATION supabase_realtime FOR TABLE tickets, messages;
 COMMIT;
+
+-- ==============================================
+-- 9. Unread Messages Tracking System (New)
+-- ==============================================
+-- Track when each user last read each ticket
+CREATE TABLE IF NOT EXISTS profiles_tickets_reads (
+    profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    ticket_id UUID REFERENCES tickets(id) ON DELETE CASCADE,
+    last_read_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    PRIMARY KEY (profile_id, ticket_id)
+);
+
+ALTER TABLE profiles_tickets_reads ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own read status." ON profiles_tickets_reads
+    FOR SELECT USING (auth.uid() = profile_id);
+
+CREATE POLICY "Users can update their own read status." ON profiles_tickets_reads
+    FOR INSERT WITH CHECK (auth.uid() = profile_id);
+
+CREATE POLICY "Users can modify their own read status update." ON profiles_tickets_reads
+    FOR UPDATE USING (auth.uid() = profile_id);
+
+-- Also enable Realtime for this table to sync badges across devices
+ALTER PUBLICATION supabase_realtime ADD TABLE profiles_tickets_reads;

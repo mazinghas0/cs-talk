@@ -59,6 +59,26 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.5rem;
+    position: relative;
+}
+
+.unread-badge {
+    background: #ef4444;
+    /* red-500 */
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    position: absolute;
+    right: -5px;
+    top: -5px;
 }
 
 .priority-badge {
@@ -112,6 +132,14 @@
     line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
+    /* added for compatibility */
     -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.ticket-item {
+    transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28), box-shadow 0.2s;
+    position: relative;
     overflow: hidden;
 }
