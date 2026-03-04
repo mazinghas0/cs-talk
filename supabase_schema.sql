@@ -2,6 +2,20 @@
 -- CS_talk Database Schema
 -- ==============================================
 
+-- 0. Clean up existing schema for clean install (Optional but recommended for dev)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+DROP TRIGGER IF EXISTS update_messages_updated_at ON messages;
+DROP TRIGGER IF EXISTS update_tickets_updated_at ON tickets;
+DROP FUNCTION IF EXISTS update_updated_at_column();
+
+DROP TABLE IF EXISTS messages CASCADE;
+DROP TABLE IF EXISTS tickets CASCADE;
+DROP TABLE IF EXISTS profiles CASCADE;
+
+DROP TYPE IF EXISTS ticket_status;
+DROP TYPE IF EXISTS ticket_priority;
+
 -- 1. Profiles Table (Extends Supabase Auth Auth.users)
 CREATE TABLE profiles (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,

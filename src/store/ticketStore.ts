@@ -105,7 +105,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         const { data, error } = await supabase
             .from('messages')
             .insert([
-                { ticket_id: ticketId, sender_id: userId, content, is_internal: isInternal }
+                { ticket_id: ticketId, sender_id: userId, content, is_internal_note: isInternal }
             ])
             .select(`*, profiles:sender_id(full_name)`)
             .single();
