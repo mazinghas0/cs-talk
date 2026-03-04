@@ -153,3 +153,13 @@ ON CONFLICT (id) DO NOTHING;
 -- 7. Add Column for Resolve Request Feature (Non-destructive)
 -- ==============================================
 ALTER TABLE tickets ADD COLUMN IF NOT EXISTS resolve_requested BOOLEAN DEFAULT FALSE NOT NULL;
+
+-- ==============================================
+-- 8. Enable Realtime for Tables
+-- ==============================================
+-- Enable Realtime for tickets and messages to sync UI across users
+BEGIN;
+  -- Remove existing if any (to avoid error on re-run)
+  DROP PUBLICATION IF EXISTS supabase_realtime;
+  CREATE PUBLICATION supabase_realtime FOR TABLE tickets, messages;
+COMMIT;

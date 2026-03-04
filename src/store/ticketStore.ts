@@ -27,6 +27,7 @@ interface TicketStore {
 
     setActiveTab: (tab: TicketStatus) => void;
     setSelectedTicketId: (id: string | null) => void;
+    subscribeToChanges: () => void;
 }
 
 
@@ -184,4 +185,54 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
             get().fetchMessages(selectedTicketId);
         }
     },
+
+    subscribeToChanges: () => {
+        // Subscribe to tickets table
+        supabase
+            .channel('public:tickets')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, (payload) => {
+                const { eventType, new: newTicket, old: oldTicket } = payload;
+
+                if (eventType === 'INSERT') {
+                    set((state) => ({
+                        tickets: [newTicket as Ticket, ...state.tickets]
+                    }));
+                } else if (eventType === 'UPDATE') {
+                    set((state) => ({
+                        tickets: state.tickets.map(t => t.id === newTicket.id ? { ...t, ...newTicket } : t)
+                    }));
+                } else if (eventType === 'DELETE') {
+                    set((state) => ({
+                        tickets: state.tickets.filter(t => t.id !== oldTicket.id),
+                        selectedTicketId: state.selectedTicketId === oldTicket.id ? null : state.selectedTicketId
+                    }));
+                }
+            })
+            .subscribe();
+
+        // Subscribe to messages table
+        supabase
+            .channel('public:messages')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
+                const newMessage = payload.new as any;
+
+                // If it's for the currently selected ticket, fetch it with profile data
+                if (newMessage.ticket_id === get().selectedTicketId) {
+                    const { data, error } = await supabase
+                        .from('messages')
+                        .select(`*, profiles:sender_id(full_name)`)
+                        .eq('id', newMessage.id)
+                        .single();
+
+                    if (!error && data) {
+                        set((state) => {
+                            // Prevent duplicate if we already have it (sent locally)
+                            if (state.messages.some(m => m.id === data.id)) return state;
+                            return { messages: [...state.messages, data] };
+                        });
+                    }
+                }
+            })
+            .subscribe();
+    }
 }));
