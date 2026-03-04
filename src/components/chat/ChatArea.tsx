@@ -162,6 +162,7 @@ export const ChatArea: React.FC = () => {
                 {messages.map((msg) => {
                     const isMe = msg.user_id === user?.id;
                     const isInternalMsg = msg.is_internal_note;
+                    const senderName = msg.profiles?.full_name || msg.profiles?.email?.split('@')[0] || '익명';
 
                     if (isInternalMsg) {
                         return (
@@ -171,7 +172,7 @@ export const ChatArea: React.FC = () => {
                                     {msg.image_url && (
                                         <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />
                                     )}
-                                    <span className="msg-time">{msg.profiles?.full_name || '관리자'} · {format(new Date(msg.created_at), 'a h:mm', { locale: ko })}</span>
+                                    <span className="msg-time">{senderName} · {format(new Date(msg.created_at), 'a h:mm', { locale: ko })}</span>
                                 </div>
                             </div>
                         );
@@ -185,7 +186,7 @@ export const ChatArea: React.FC = () => {
                                     <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />
                                 )}
                                 <span className="msg-time">
-                                    {!isMe && (msg.profiles?.full_name + ' · ')}
+                                    {!isMe && (senderName + ' · ')}
                                     {format(new Date(msg.created_at), 'a h:mm', { locale: ko })}
                                 </span>
                             </div>

@@ -26,6 +26,7 @@ export interface Message {
     created_at: string;
     thread_parent_id?: string;
     profiles?: {
-        full_name: string;
+        full_name: string | null;
+        email?: string;
     };
 }

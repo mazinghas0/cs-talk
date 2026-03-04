@@ -3,8 +3,10 @@ import './MainLayout.css';
 import { MessageSquare, LayoutDashboard, Settings, UserCircle } from 'lucide-react';
 import { TicketList } from '../ticket/TicketList';
 import { ChatArea } from '../chat/ChatArea';
+import { ProfileSettings } from '../profile/ProfileSettings';
 
 export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
+    const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
     return (
         <div className="layout-container">
             {/* 1. Global Sidebar (Left) */}
@@ -17,10 +19,12 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                     <MessageSquare size={24} color="var(--accent-primary)" cursor="pointer" />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
-                    <Settings size={24} color="var(--text-secondary)" cursor="pointer" />
-                    <UserCircle size={32} color="var(--text-primary)" cursor="pointer" />
+                    <Settings size={24} color="var(--text-secondary)" cursor="pointer" onClick={() => setIsSettingsOpen(true)} />
+                    <UserCircle size={32} color="var(--text-primary)" cursor="pointer" onClick={() => setIsSettingsOpen(true)} />
                 </div>
             </nav>
+
+            <ProfileSettings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
             {/* 2. Ticket / Chat List (Middle) */}
             <aside className="pane-list">

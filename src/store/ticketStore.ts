@@ -70,7 +70,11 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         }
 
         if (data) {
-            set((state) => ({ tickets: [data as Ticket, ...state.tickets] }));
+            set((state) => {
+                // Prevent duplicate if already added by real-time sync
+                if (state.tickets.some(t => t.id === data.id)) return state;
+                return { tickets: [data as Ticket, ...state.tickets] };
+            });
         }
     },
 
@@ -129,7 +133,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     fetchMessages: async (ticketId) => {
         const { data, error } = await supabase
             .from('messages')
-            .select(`*, profiles:user_id(full_name)`)
+            .select(`*, profiles:user_id(full_name, email)`)
             .eq('ticket_id', ticketId)
             .order('created_at', { ascending: true });
 
@@ -146,7 +150,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
             .insert([
                 { ticket_id: ticketId, user_id: userId, content, is_internal_note: isInternal, image_url: imageUrl }
             ])
-            .select(`*, profiles:user_id(full_name)`)
+            .select(`*, profiles:user_id(full_name, email)`)
             .single();
 
         if (error) {
@@ -227,7 +231,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 if (newMessage.ticket_id === get().selectedTicketId) {
                     const { data, error } = await supabase
                         .from('messages')
-                        .select(`*, profiles:user_id(full_name)`)
+                        .select(`*, profiles:user_id(full_name, email)`)
                         .eq('id', newMessage.id)
                         .single();
 
