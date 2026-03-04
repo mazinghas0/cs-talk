@@ -154,3 +154,21 @@
 .nav-item:active {
     background: rgba(99, 102, 241, 0.1);
 }
+
+/* ===================================
+   MOBILE SLIDE ANIMATIONS
+   =================================== */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+/* Chat pane slides in from the right on mobile */
+.is-mobile .pane-content {
+    animation: slideInRight 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+}

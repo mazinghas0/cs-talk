@@ -83,7 +83,8 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 .from('messages')
                 .select('*', { count: 'exact', head: true })
                 .eq('ticket_id', ticket.id)
-                .gt('created_at', lastRead);
+                .gt('created_at', lastRead)
+                .neq('user_id', user.id); // Don't count my own messages as unread
 
             if (!error) {
                 counts[ticket.id] = count || 0;
