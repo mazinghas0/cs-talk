@@ -11,6 +11,7 @@ interface TicketStore {
     activeTab: TicketStatus;
     selectedTicketId: string | null;
     isLoadingData: boolean;
+    isSubscribed: boolean;
 
     // Actions
     fetchTickets: () => Promise<void>;
@@ -27,7 +28,7 @@ interface TicketStore {
 
     setActiveTab: (tab: TicketStatus) => void;
     setSelectedTicketId: (id: string | null) => void;
-    subscribeToChanges: () => void;
+    subscribeToChanges: () => (() => void);
 }
 
 
@@ -37,6 +38,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     activeTab: 'in_progress',
     selectedTicketId: null,
     isLoadingData: false,
+    isSubscribed: false,
 
     fetchTickets: async () => {
         set({ isLoadingData: true });
@@ -191,10 +193,16 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     },
 
     subscribeToChanges: () => {
-        // Subscribe to tickets table
-        supabase
-            .channel('public:tickets')
+        if (get().isSubscribed) {
+            return () => { };
+        }
+
+        console.log('🔔 [Realtime] Subscribing...');
+
+        const channel = supabase
+            .channel('db-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, (payload) => {
+                console.log('📝 [Realtime] Ticket Change:', payload);
                 const { eventType, new: newTicket, old: oldTicket } = payload;
 
                 if (eventType === 'INSERT') {
@@ -212,15 +220,10 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                     }));
                 }
             })
-            .subscribe();
-
-        // Subscribe to messages table
-        supabase
-            .channel('public:messages')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
+                console.log('💬 [Realtime] Message Insert:', payload);
                 const newMessage = payload.new as any;
 
-                // If it's for the currently selected ticket, fetch it with profile data
                 if (newMessage.ticket_id === get().selectedTicketId) {
                     const { data, error } = await supabase
                         .from('messages')
@@ -230,13 +233,23 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
 
                     if (!error && data) {
                         set((state) => {
-                            // Prevent duplicate if we already have it (sent locally)
                             if (state.messages.some(m => m.id === data.id)) return state;
                             return { messages: [...state.messages, data] };
                         });
                     }
                 }
             })
-            .subscribe();
+            .subscribe((status) => {
+                console.log('📡 [Realtime] Status:', status);
+                if (status === 'SUBSCRIBED') {
+                    set({ isSubscribed: true });
+                }
+            });
+
+        return () => {
+            console.log('🔕 [Realtime] Unsubscribing...');
+            supabase.removeChannel(channel);
+            set({ isSubscribed: false });
+        };
     }
 }));

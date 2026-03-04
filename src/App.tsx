@@ -14,7 +14,10 @@ function App() {
 
   useEffect(() => {
     if (session) {
-      subscribeToChanges()
+      const unsubscribe = subscribeToChanges()
+      return () => {
+        if (unsubscribe) unsubscribe()
+      }
     }
   }, [session, subscribeToChanges])
 
