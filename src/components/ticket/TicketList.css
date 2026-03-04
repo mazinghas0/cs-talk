@@ -6,6 +6,9 @@
 
 .ticket-list-header {
     padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .ticket-list-header .title {
