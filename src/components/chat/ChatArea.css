@@ -10,30 +10,31 @@
 .chat-area::before {
     content: '';
     position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    z-index: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    /* BELOW all content */
     pointer-events: none;
-    transition: all 1s ease-in-out;
-    opacity: 0.15;
+    transition: background 1.2s ease-in-out;
+    opacity: 1;
 }
 
 .chat-area.ambient-urgent::before {
-    background: radial-gradient(circle, rgba(239, 68, 68, 0.4) 0%, transparent 60%);
+    background: radial-gradient(ellipse at top, rgba(239, 68, 68, 0.12) 0%, transparent 70%);
 }
 
 .chat-area.ambient-high::before {
-    background: radial-gradient(circle, rgba(249, 115, 22, 0.3) 0%, transparent 60%);
+    background: radial-gradient(ellipse at top, rgba(249, 115, 22, 0.10) 0%, transparent 70%);
 }
 
 .chat-area.ambient-medium::before {
-    background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 60%);
+    background: radial-gradient(ellipse at top, rgba(99, 102, 241, 0.07) 0%, transparent 70%);
 }
 
 .chat-area.ambient-low::before {
-    background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 60%);
+    background: radial-gradient(ellipse at top, rgba(16, 185, 129, 0.07) 0%, transparent 70%);
 }
 
 .back-btn {
@@ -72,8 +73,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(20, 20, 20, 0.6);
-    backdrop-filter: blur(8px);
+    background: rgba(20, 20, 20, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    position: relative;
+    /* Ensure above ::before */
+    z-index: 1;
 }
 
 .chat-header-info {

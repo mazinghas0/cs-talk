@@ -1,9 +1,11 @@
 /* ===================================
-   MAIN LAYOUT - 3-Pane / Mobile Stack
+   MAIN LAYOUT - 3-Pane Desktop / Stack Mobile
    =================================== */
 .layout-container {
     display: flex;
     height: 100vh;
+    height: 100dvh;
+    /* dynamic viewport for mobile browsers */
     width: 100vw;
     overflow: hidden;
     background-image:
@@ -12,7 +14,7 @@
 }
 
 /* ===================================
-   SIDEBAR (Left - Desktop only)
+   SIDEBAR (Desktop only)
    =================================== */
 .pane-sidebar {
     width: var(--sidebar-width);
@@ -28,8 +30,37 @@
     flex-shrink: 0;
 }
 
+.sidebar-top {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.sidebar-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--accent-primary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: white;
+}
+
+.sidebar-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
 /* ===================================
-   MIDDLE PANE (Ticket List)
+   TICKET LIST PANE
    =================================== */
 .pane-list {
     width: var(--list-width);
@@ -40,10 +71,11 @@
     flex-direction: column;
     z-index: 9;
     flex-shrink: 0;
+    overflow: hidden;
 }
 
 /* ===================================
-   MAIN CONTENT (Chat Area - Right)
+   CHAT CONTENT PANE
    =================================== */
 .pane-content {
     flex: 1;
@@ -52,38 +84,33 @@
     background: transparent;
     position: relative;
     min-width: 0;
+    overflow: hidden;
 }
 
 /* ===================================
-   MOBILE RESPONSIVE OVERRIDES
-   Applied via JS class .mobile,
-   NOT via @media query to avoid conflicts
+   MOBILE OVERRIDES (is-mobile class set by JS)
    =================================== */
-.layout-container.mobile {
+.layout-container.is-mobile {
     flex-direction: column;
-    height: 100dvh;
-    /* dynamic viewport for mobile browsers */
+    /* Leave room for bottom nav */
+    padding-bottom: 60px;
 }
 
-.layout-container.mobile .pane-list {
+.layout-container.is-mobile .pane-list {
     width: 100%;
     flex: 1;
     border-right: none;
-    border-bottom: 1px solid var(--glass-border);
 }
 
-.layout-container.mobile .pane-content {
+.layout-container.is-mobile .pane-content {
     width: 100%;
-    /* When list is showing, chat is hidden */
+    flex: 1;
+    /* No padding-bottom needed when chat is fullscreen */
 }
 
-/* Hidden class for mobile stack nav */
-.pane-list.hidden {
-    display: none;
-}
-
-.pane-content.hidden {
-    display: none;
+/* When chat is open on mobile, remove the bottom nav padding */
+.layout-container.is-mobile:has(.pane-content) {
+    padding-bottom: 0;
 }
 
 /* ===================================
@@ -102,20 +129,22 @@
     display: flex;
     justify-content: space-around;
     align-items: center;
-    z-index: 100;
+    z-index: 200;
 }
 
 .nav-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
+    gap: 3px;
     color: var(--text-secondary);
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 500;
-    transition: color 0.2s;
     cursor: pointer;
-    padding: 8px 20px;
+    padding: 8px 24px;
+    border-radius: 12px;
+    transition: color 0.2s, background 0.2s;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .nav-item.active {
@@ -123,10 +152,5 @@
 }
 
 .nav-item:active {
-    opacity: 0.7;
-}
-
-/* When bottom nav is visible, push content up */
-.layout-container.mobile:not(.has-selection) {
-    padding-bottom: 60px;
+    background: rgba(99, 102, 241, 0.1);
 }
