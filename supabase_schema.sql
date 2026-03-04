@@ -42,6 +42,7 @@ CREATE TABLE tickets (
     description TEXT,
     status ticket_status DEFAULT 'open' NOT NULL,
     priority ticket_priority DEFAULT 'medium' NOT NULL,
+    image_url TEXT,
     requesting_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
     assignee_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -61,6 +62,7 @@ CREATE TABLE messages (
     ticket_id UUID REFERENCES tickets(id) ON DELETE CASCADE NOT NULL,
     user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
     content TEXT NOT NULL,
+    image_url TEXT,
     is_internal_note BOOLEAN DEFAULT FALSE NOT NULL, -- Admin only notes
     is_resolution BOOLEAN DEFAULT FALSE NOT NULL, -- Official answer
     thread_parent_id UUID REFERENCES messages(id) ON DELETE CASCADE,
@@ -112,3 +114,24 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- ==============================================
+-- 5. Storage Buckets (File Attachments)
+-- ==============================================
+
+-- Create a public bucket named 'attachments'
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('attachments', 'attachments', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Ensure RLS is enabled for storage objects
+-- NOTE: In Supabase, storage.objects already has RLS enabled by default.
+-- Policy: allow public to read any image in the attachments bucket
+CREATE POLICY "Public Read Access"
+ON storage.objects FOR SELECT
+USING ( bucket_id = 'attachments' );
+
+-- Policy: allow authenticated users to upload new files
+CREATE POLICY "Authenticated Users Upload Access"
+ON storage.objects FOR INSERT
+WITH CHECK ( bucket_id = 'attachments' AND auth.role() = 'authenticated' );

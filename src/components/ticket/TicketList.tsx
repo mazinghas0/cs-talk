@@ -17,6 +17,7 @@ export const TicketList: React.FC = () => {
     const [newTitle, setNewTitle] = useState('');
     const [newDesc, setNewDesc] = useState('');
     const [newPriority, setNewPriority] = useState<TicketPriority>('medium');
+    const [newImage, setNewImage] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -32,12 +33,18 @@ export const TicketList: React.FC = () => {
 
         setIsSubmitting(true);
         try {
-            await createTicket(newTitle, newDesc, newPriority, user.id);
+            let imageUrl = undefined;
+            if (newImage) {
+                imageUrl = await useTicketStore.getState().uploadImage(newImage);
+            }
+            await createTicket(newTitle, newDesc, newPriority, user.id, imageUrl);
             setIsModalOpen(false);
             setNewTitle('');
             setNewDesc('');
             setNewPriority('medium');
+            setNewImage(null);
         } catch (err) {
+            console.error(err);
             alert('티켓 생성 실패. 다시 시도해주세요.');
         } finally {
             setIsSubmitting(false);
@@ -49,7 +56,7 @@ export const TicketList: React.FC = () => {
             <div className="ticket-list-header">
                 <h2 className="title">업무 요청</h2>
                 <button className="icon-btn-create" onClick={() => setIsModalOpen(true)}>
-                    <Plus size={20} />
+                    <Plus size={16} /> 업무 등록
                 </button>
             </div>
 
@@ -122,6 +129,14 @@ export const TicketList: React.FC = () => {
                                     placeholder="상세한 요청 내용이나 오류 상황을 적어주세요."
                                     rows={4}
                                     required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>첨부 이미지 (선택)</label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => setNewImage(e.target.files?.[0] || null)}
                                 />
                             </div>
                             <div className="modal-actions">

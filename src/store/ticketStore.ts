@@ -14,12 +14,13 @@ interface TicketStore {
 
     // Actions
     fetchTickets: () => Promise<void>;
-    createTicket: (title: string, description: string, priority: TicketPriority, userId: string) => Promise<void>;
+    createTicket: (title: string, description: string, priority: TicketPriority, userId: string, imageUrl?: string) => Promise<void>;
     updateTicketStatus: (id: string, status: TicketStatus) => Promise<void>;
 
     // Message Actions
     fetchMessages: (ticketId: string) => Promise<void>;
-    sendMessage: (ticketId: string, content: string, userId: string, isInternal?: boolean) => Promise<void>;
+    sendMessage: (ticketId: string, content: string, userId: string, isInternal?: boolean, imageUrl?: string) => Promise<void>;
+    uploadImage: (file: File) => Promise<string>;
 
     setActiveTab: (tab: TicketStatus) => void;
     setSelectedTicketId: (id: string | null) => void;
@@ -29,7 +30,7 @@ interface TicketStore {
 export const useTicketStore = create<TicketStore>((set, get) => ({
     tickets: [],
     messages: [],
-    activeTab: 'open',
+    activeTab: 'in_progress',
     selectedTicketId: null,
     isLoadingData: false,
 
@@ -48,11 +49,11 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         set({ isLoadingData: false });
     },
 
-    createTicket: async (title, description, priority, userId) => {
+    createTicket: async (title, description, priority, userId, imageUrl) => {
         const { data, error } = await supabase
             .from('tickets')
             .insert([
-                { title, description, priority, requesting_user_id: userId }
+                { title, description, priority, requesting_user_id: userId, status: 'in_progress', image_url: imageUrl }
             ])
             .select()
             .single();
@@ -101,11 +102,11 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         }
     },
 
-    sendMessage: async (ticketId, content, userId, isInternal = false) => {
+    sendMessage: async (ticketId, content, userId, isInternal = false, imageUrl) => {
         const { data, error } = await supabase
             .from('messages')
             .insert([
-                { ticket_id: ticketId, sender_id: userId, content, is_internal_note: isInternal }
+                { ticket_id: ticketId, sender_id: userId, content, is_internal_note: isInternal, image_url: imageUrl }
             ])
             .select(`*, profiles:sender_id(full_name)`)
             .single();
@@ -118,6 +119,27 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         if (data) {
             set((state) => ({ messages: [...state.messages, data as any] }));
         }
+    },
+
+    uploadImage: async (file: File) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('attachments')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            console.error('Error uploading image:', uploadError);
+            throw uploadError;
+        }
+
+        const { data } = supabase.storage
+            .from('attachments')
+            .getPublicUrl(filePath);
+
+        return data.publicUrl;
     },
 
     setActiveTab: (activeTab) => set({ activeTab, selectedTicketId: null, messages: [] }),

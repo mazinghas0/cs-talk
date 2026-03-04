@@ -139,6 +139,14 @@
     margin-bottom: 0.25rem;
 }
 
+.attached-image {
+    max-width: 100%;
+    border-radius: 8px;
+    margin-top: 8px;
+    margin-bottom: 4px;
+    display: block;
+}
+
 .msg-time {
     font-size: 0.7rem;
     color: rgba(255, 255, 255, 0.6);

@@ -7,7 +7,6 @@ export const TicketTabs: React.FC = () => {
     const { activeTab, setActiveTab } = useTicketStore();
 
     const tabs: { id: TicketStatus; label: string }[] = [
-        { id: 'open', label: '요청 대기' },
         { id: 'in_progress', label: '진행중' },
         { id: 'resolved', label: '처리완료' },
     ];

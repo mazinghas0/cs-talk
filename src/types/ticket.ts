@@ -7,6 +7,7 @@ export interface Ticket {
     description: string;
     status: TicketStatus;
     priority: TicketPriority;
+    image_url?: string;
     created_at: string;
     updated_at: string;
     assignee_id?: string;
@@ -20,6 +21,7 @@ export interface Message {
     content: string;
     is_internal: boolean;
     is_resolution: boolean;
+    image_url?: string;
     created_at: string;
     thread_parent_id?: string;
     profiles?: {

@@ -40,10 +40,6 @@ export const ChatArea: React.FC = () => {
         try {
             await sendMessage(ticket.id, newMessage, user.id, isInternal);
             setNewMessage('');
-            // If ticket was new/open, moving it to in_progress automatically could be a nice feature
-            if (ticket.status === 'open' && !isInternal) {
-                await updateTicketStatus(ticket.id, 'in_progress');
-            }
         } catch (error) {
             console.error('Failed to send message:', error);
             alert('메시지 전송에 실패했습니다.');
@@ -66,7 +62,7 @@ export const ChatArea: React.FC = () => {
                 <div className="chat-header-info">
                     <h2>{ticket.title}</h2>
                     <span className={`status-badge ${ticket.status}`}>
-                        {ticket.status === 'open' ? '요청 대기' : ticket.status === 'in_progress' ? '진행중' : '처리완료'}
+                        {ticket.status === 'in_progress' ? '진행중' : '처리완료'}
                     </span>
                 </div>
                 <div className="chat-header-actions">
@@ -82,6 +78,9 @@ export const ChatArea: React.FC = () => {
                 <div className="message-wrapper user-req">
                     <div className="message-bubble req-bubble">
                         <p className="msg-text">{ticket.description}</p>
+                        {ticket.image_url && (
+                            <img src={ticket.image_url} alt="첨부 이미지" className="attached-image" />
+                        )}
                         <span className="msg-time">{format(new Date(ticket.created_at), 'a h:mm', { locale: ko })} (최초 요청)</span>
                     </div>
                 </div>
@@ -95,6 +94,9 @@ export const ChatArea: React.FC = () => {
                             <div key={msg.id} className="message-wrapper internal">
                                 <div className="message-bubble internal-bubble">
                                     <p className="msg-text">{msg.content}</p>
+                                    {msg.image_url && (
+                                        <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />
+                                    )}
                                     <span className="msg-time">{msg.profiles?.full_name || '관리자'} · {format(new Date(msg.created_at), 'a h:mm', { locale: ko })}</span>
                                 </div>
                             </div>
@@ -105,6 +107,9 @@ export const ChatArea: React.FC = () => {
                         <div key={msg.id} className={`message-wrapper ${isMe ? 'admin-res' : 'user-req'}`}>
                             <div className={`message-bubble ${isMe ? 'res-bubble' : 'req-bubble'}`}>
                                 <p className="msg-text">{msg.content}</p>
+                                {msg.image_url && (
+                                    <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />
+                                )}
                                 <span className="msg-time">
                                     {!isMe && (msg.profiles?.full_name + ' · ')}
                                     {format(new Date(msg.created_at), 'a h:mm', { locale: ko })}
