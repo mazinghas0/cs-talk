@@ -42,10 +42,10 @@ export const TicketList: React.FC = () => {
             setNewTitle('');
             setNewDesc('');
             setNewPriority('medium');
-            setNewImage(null);
-        } catch (err) {
-            console.error(err);
-            alert('티켓 생성 실패. 다시 시도해주세요.');
+        } catch (err: any) {
+            console.error('Create Ticket Error:', err);
+            const errorMessage = err instanceof Error ? err.message : typeof err === 'object' && err !== null && 'message' in err ? String(err.message) : '알 수 없는 오류';
+            alert(`티켓 생성 실패: ${errorMessage}\n\n잠시 후 다시 시도해주세요.`);
         } finally {
             setIsSubmitting(false);
         }
@@ -93,9 +93,33 @@ export const TicketList: React.FC = () => {
             {/* New Ticket Modal */}
             {isModalOpen && (
                 <div className="modal-overlay">
-                    <div className="modal-content">
+                    <div className="modal-content"
+                        onPaste={(e) => {
+                            const items = e.clipboardData?.items;
+                            if (items) {
+                                for (let i = 0; i < items.length; i++) {
+                                    if (items[i].type.indexOf('image') !== -1) {
+                                        const file = items[i].getAsFile();
+                                        if (file) {
+                                            setNewImage(file);
+                                            e.preventDefault();
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                            e.preventDefault();
+                            const file = e.dataTransfer.files?.[0];
+                            if (file && file.type.startsWith('image/')) {
+                                setNewImage(file);
+                            }
+                        }}
+                    >
                         <div className="modal-header">
-                            <h3>새 요청 등록</h3>
+                            <h3>새 업무 등록</h3>
                             <button className="icon-btn-close" onClick={() => setIsModalOpen(false)}>
                                 <X size={20} />
                             </button>
@@ -132,7 +156,12 @@ export const TicketList: React.FC = () => {
                                 />
                             </div>
                             <div className="form-group">
-                                <label>첨부 이미지 (선택)</label>
+                                <label>첨부 이미지 (사진 선택, 캡처 붙여넣기, 또는 드래그 앤 드롭)</label>
+                                {newImage && (
+                                    <div className="image-preview" style={{ marginBottom: '8px', fontSize: '0.85rem', color: 'var(--accent-success)' }}>
+                                        ✅ 이미지 첨부됨: {newImage.name}
+                                    </div>
+                                )}
                                 <input
                                     type="file"
                                     accept="image/*"
