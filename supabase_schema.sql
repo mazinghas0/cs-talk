@@ -126,11 +126,14 @@ ON CONFLICT (id) DO UPDATE SET public = true;
 
 -- Ensure RLS is enabled for storage objects
 -- NOTE: In Supabase, storage.objects already has RLS enabled by default.
+
+DROP POLICY IF EXISTS "Public Read Access" ON storage.objects;
 -- Policy: allow public to read any image in the attachments bucket
 CREATE POLICY "Public Read Access"
 ON storage.objects FOR SELECT
 USING ( bucket_id = 'attachments' );
 
+DROP POLICY IF EXISTS "Authenticated Users Upload Access" ON storage.objects;
 -- Policy: allow authenticated users to upload new files
 CREATE POLICY "Authenticated Users Upload Access"
 ON storage.objects FOR INSERT
