@@ -1,14 +1,19 @@
+/* ===================================
+   MAIN LAYOUT - 3-Pane / Mobile Stack
+   =================================== */
 .layout-container {
     display: flex;
     height: 100vh;
     width: 100vw;
-    /* subtle dynamic background gradient */
+    overflow: hidden;
     background-image:
         radial-gradient(circle at top right, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
         radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
 }
 
-/* Leftmost Sidebar (Navigation) */
+/* ===================================
+   SIDEBAR (Left - Desktop only)
+   =================================== */
 .pane-sidebar {
     width: var(--sidebar-width);
     background: var(--glass-bg);
@@ -20,9 +25,12 @@
     align-items: center;
     padding: 1rem 0;
     z-index: 10;
+    flex-shrink: 0;
 }
 
-/* Middle List (Tickets / Chat rooms) */
+/* ===================================
+   MIDDLE PANE (Ticket List)
+   =================================== */
 .pane-list {
     width: var(--list-width);
     background: rgba(20, 20, 20, 0.8);
@@ -31,40 +39,94 @@
     display: flex;
     flex-direction: column;
     z-index: 9;
+    flex-shrink: 0;
 }
 
-/* Right Content (Chat interface) */
+/* ===================================
+   MAIN CONTENT (Chat Area - Right)
+   =================================== */
 .pane-content {
     flex: 1;
     display: flex;
     flex-direction: column;
     background: transparent;
     position: relative;
+    min-width: 0;
 }
 
-@media (max-width: 768px) {
-    .layout-container {
-        flex-direction: column-reverse;
-        /* For bottom tab bar */
-    }
+/* ===================================
+   MOBILE RESPONSIVE OVERRIDES
+   Applied via JS class .mobile,
+   NOT via @media query to avoid conflicts
+   =================================== */
+.layout-container.mobile {
+    flex-direction: column;
+    height: 100dvh;
+    /* dynamic viewport for mobile browsers */
+}
 
-    .pane-sidebar {
-        width: 100%;
-        height: 64px;
-        flex-direction: row;
-        justify-content: space-around;
-        border-right: none;
-        border-top: 1px solid var(--glass-border);
-        padding: 0;
-    }
+.layout-container.mobile .pane-list {
+    width: 100%;
+    flex: 1;
+    border-right: none;
+    border-bottom: 1px solid var(--glass-border);
+}
 
-    .pane-list {
-        width: 100%;
-        flex: 1;
-    }
+.layout-container.mobile .pane-content {
+    width: 100%;
+    /* When list is showing, chat is hidden */
+}
 
-    .pane-content {
-        display: none;
-        /* In mobile, usually only one pane is visible at a time */
-    }
+/* Hidden class for mobile stack nav */
+.pane-list.hidden {
+    display: none;
+}
+
+.pane-content.hidden {
+    display: none;
+}
+
+/* ===================================
+   MOBILE BOTTOM NAVIGATION
+   =================================== */
+.mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 100;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    font-weight: 500;
+    transition: color 0.2s;
+    cursor: pointer;
+    padding: 8px 20px;
+}
+
+.nav-item.active {
+    color: var(--accent-primary);
+}
+
+.nav-item:active {
+    opacity: 0.7;
+}
+
+/* When bottom nav is visible, push content up */
+.layout-container.mobile:not(.has-selection) {
+    padding-bottom: 60px;
 }

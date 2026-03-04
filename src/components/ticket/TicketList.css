@@ -39,7 +39,10 @@
     border-radius: 12px;
     padding: 1rem;
     cursor: pointer;
-    transition: all 0.2s ease-in-out;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.2s ease-in-out, box-shadow 0.2s, border-color 0.2s;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .ticket-item:hover {
@@ -138,8 +141,52 @@
     overflow: hidden;
 }
 
-.ticket-item {
-    transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28), box-shadow 0.2s;
-    position: relative;
+.pull-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: var(--accent-primary);
+    background: rgba(99, 102, 241, 0.05);
     overflow: hidden;
+    transition: height 0.1s;
+}
+
+.icon-btn-refresh {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--glass-border);
+    color: var(--text-secondary);
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.icon-btn-refresh:hover {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.icon-btn-create {
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0 12px;
+    height: 36px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.icon-btn-create:hover {
+    background: var(--accent-primary-hover);
 }

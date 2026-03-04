@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import './TicketList.css';
 import './TicketModal.css';
 import { useTicketStore } from '../../store/ticketStore';
 import { TicketTabs } from './TicketTabs';
-import { Clock, Plus, X } from 'lucide-react';
+import { Clock, Plus, X, RefreshCw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useAuthStore } from '../../store/authStore';
@@ -13,6 +13,7 @@ export const TicketList: React.FC = () => {
     const { tickets, activeTab, selectedTicketId, setSelectedTicketId, fetchTickets, createTicket, isLoadingData, unreadCounts } = useTicketStore();
     const { user } = useAuthStore();
 
+    // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newTitle, setNewTitle] = useState('');
     const [newDesc, setNewDesc] = useState('');
@@ -20,11 +21,42 @@ export const TicketList: React.FC = () => {
     const [newImage, setNewImage] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Pull-to-refresh state
+    const [pullDistance, setPullDistance] = useState(0);
+    const isPulling = useRef(false);
+    const pullStartY = useRef(0);
+    const listBodyRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         fetchTickets();
     }, [fetchTickets]);
 
-    // Filter tickets by active tab
+    // --- Pull-to-Refresh (on the list body only) ---
+    const handleListTouchStart = (e: React.TouchEvent) => {
+        const el = listBodyRef.current;
+        if (el && el.scrollTop === 0) {
+            pullStartY.current = e.touches[0].pageY;
+            isPulling.current = true;
+        }
+    };
+
+    const handleListTouchMove = (e: React.TouchEvent) => {
+        if (!isPulling.current) return;
+        const diff = e.touches[0].pageY - pullStartY.current;
+        if (diff > 0) {
+            setPullDistance(Math.min(diff * 0.4, 80));
+        }
+    };
+
+    const handleListTouchEnd = async () => {
+        if (!isPulling.current) return;
+        isPulling.current = false;
+        if (pullDistance > 50) {
+            await fetchTickets();
+        }
+        setPullDistance(0);
+    };
+
     const filteredTickets = tickets.filter(t => t.status === activeTab);
 
     const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -42,9 +74,10 @@ export const TicketList: React.FC = () => {
             setNewTitle('');
             setNewDesc('');
             setNewPriority('medium');
+            setNewImage(null);
         } catch (err: any) {
             console.error('Create Ticket Error:', err);
-            const errorMessage = err instanceof Error ? err.message : typeof err === 'object' && err !== null && 'message' in err ? String(err.message) : '알 수 없는 오류';
+            const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류';
             alert(`티켓 생성 실패: ${errorMessage}\n\n잠시 후 다시 시도해주세요.`);
         } finally {
             setIsSubmitting(false);
@@ -55,14 +88,36 @@ export const TicketList: React.FC = () => {
         <div className="ticket-list-container">
             <div className="ticket-list-header">
                 <h2 className="title">업무 요청</h2>
-                <button className="icon-btn-create" onClick={() => setIsModalOpen(true)}>
-                    <Plus size={16} /> 업무 등록
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                        className="icon-btn-refresh"
+                        onClick={() => fetchTickets()}
+                        title="새로고침"
+                    >
+                        <RefreshCw size={16} />
+                    </button>
+                    <button className="icon-btn-create" onClick={() => setIsModalOpen(true)}>
+                        <Plus size={16} /> 업무 등록
+                    </button>
+                </div>
             </div>
 
             <TicketTabs />
 
-            <div className="ticket-list-body">
+            {/* Pull-to-refresh indicator */}
+            {pullDistance > 0 && (
+                <div className="pull-indicator" style={{ height: pullDistance }}>
+                    {pullDistance > 50 ? '🔄 놓아서 새로고침' : '⬇️ 계속 당기세요...'}
+                </div>
+            )}
+
+            <div
+                className="ticket-list-body"
+                ref={listBodyRef}
+                onTouchStart={handleListTouchStart}
+                onTouchMove={handleListTouchMove}
+                onTouchEnd={handleListTouchEnd}
+            >
                 {isLoadingData ? (
                     <div className="empty-state">데이터를 불러오는 중...</div>
                 ) : filteredTickets.length === 0 ? (
@@ -82,7 +137,7 @@ export const TicketList: React.FC = () => {
                                     <Clock size={12} />
                                     {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true, locale: ko })}
                                 </span>
-                                {unreadCounts[ticket.id] > 0 && (
+                                {(unreadCounts[ticket.id] ?? 0) > 0 && (
                                     <span className="unread-badge">{unreadCounts[ticket.id]}</span>
                                 )}
                             </div>
