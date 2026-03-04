@@ -12,6 +12,7 @@ export interface Ticket {
     updated_at: string;
     assignee_id?: string;
     requesting_user_id: string;
+    resolve_requested: boolean;
 }
 
 export interface Message {

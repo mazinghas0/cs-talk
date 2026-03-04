@@ -77,6 +77,56 @@
     opacity: 0.9;
 }
 
+.btn-request-resolve {
+    background: transparent;
+    color: var(--accent-primary);
+    border: 1px solid var(--accent-primary);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-request-resolve:hover {
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.resolve-requested-badge {
+    color: var(--accent-warning);
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 4px 8px;
+    border: 1px dashed var(--accent-warning);
+    border-radius: 6px;
+}
+
+.icon-btn-header {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    margin-right: 4px;
+}
+
+.icon-btn-header:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.chat-header-actions {
+    display: flex;
+    align-items: center;
+}
+
 /* Messages */
 .chat-messages {
     flex: 1;

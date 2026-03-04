@@ -16,6 +16,9 @@ interface TicketStore {
     fetchTickets: () => Promise<void>;
     createTicket: (title: string, description: string, priority: TicketPriority, userId: string, imageUrl?: string) => Promise<void>;
     updateTicketStatus: (id: string, status: TicketStatus) => Promise<void>;
+    deleteTicket: (id: string) => Promise<void>;
+    updateTicket: (id: string, updates: Partial<Ticket>) => Promise<void>;
+    requestResolution: (id: string) => Promise<void>;
 
     // Message Actions
     fetchMessages: (ticketId: string) => Promise<void>;
@@ -71,13 +74,14 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     updateTicketStatus: async (id, status) => {
         // Optimistic update
         const prevTickets = get().tickets;
+        const updates = status === 'in_progress' ? { status, resolve_requested: false } : { status };
         set((state) => ({
-            tickets: state.tickets.map(t => t.id === id ? { ...t, status } : t)
+            tickets: state.tickets.map(t => t.id === id ? { ...t, ...updates } : t)
         }));
 
         const { error } = await supabase
             .from('tickets')
-            .update({ status })
+            .update(updates)
             .eq('id', id);
 
         if (error) {
@@ -86,6 +90,37 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
             set({ tickets: prevTickets });
             throw error;
         }
+    },
+
+    deleteTicket: async (id) => {
+        const prevTickets = get().tickets;
+        set((state) => ({
+            tickets: state.tickets.filter(t => t.id !== id),
+            selectedTicketId: state.selectedTicketId === id ? null : state.selectedTicketId
+        }));
+        const { error } = await supabase.from('tickets').delete().eq('id', id);
+        if (error) {
+            console.error('Error deleting ticket:', error);
+            set({ tickets: prevTickets });
+            throw error;
+        }
+    },
+
+    updateTicket: async (id, updates) => {
+        const prevTickets = get().tickets;
+        set((state) => ({
+            tickets: state.tickets.map(t => t.id === id ? { ...t, ...updates } : t)
+        }));
+        const { error } = await supabase.from('tickets').update(updates).eq('id', id);
+        if (error) {
+            console.error('Error updating ticket:', error);
+            set({ tickets: prevTickets });
+            throw error;
+        }
+    },
+
+    requestResolution: async (id) => {
+        await get().updateTicket(id, { resolve_requested: true });
     },
 
     fetchMessages: async (ticketId) => {

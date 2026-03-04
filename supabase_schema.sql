@@ -43,6 +43,7 @@ CREATE TABLE tickets (
     status ticket_status DEFAULT 'open' NOT NULL,
     priority ticket_priority DEFAULT 'medium' NOT NULL,
     image_url TEXT,
+    resolve_requested BOOLEAN DEFAULT FALSE NOT NULL,
     requesting_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
     assignee_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -144,7 +145,11 @@ WITH CHECK ( bucket_id = 'attachments' AND auth.role() = 'authenticated' );
 -- ==============================================
 -- If the profiles table was dropped and recreated, but auth.users still exists,
 -- this will sync existing users back into the newly created profiles table 
--- so that foreign key constraints on 'requesting_user_id' do not fail.
 INSERT INTO public.profiles (id, email)
 SELECT id, email FROM auth.users
 ON CONFLICT (id) DO NOTHING;
+
+-- ==============================================
+-- 7. Add Column for Resolve Request Feature (Non-destructive)
+-- ==============================================
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS resolve_requested BOOLEAN DEFAULT FALSE NOT NULL;
