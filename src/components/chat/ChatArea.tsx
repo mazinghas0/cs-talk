@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './ChatArea.css';
 import { useTicketStore } from '../../store/ticketStore';
 import { useAuthStore } from '../../store/authStore';
@@ -28,14 +28,48 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
     const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const chatMessagesRef = useRef<HTMLDivElement>(null);
+    const [hasNewMessage, setHasNewMessage] = useState(false);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const isAtBottom = useCallback(() => {
+        const el = chatMessagesRef.current;
+        if (!el) return true;
+        return el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    }, []);
+
+    const scrollToBottom = useCallback((instant = false) => {
+        messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' });
+    }, []);
+
+    // 채팅방 전환 시 즉시 맨 아래로 이동
+    useEffect(() => {
+        setHasNewMessage(false);
+        // 렌더링 후 실행되도록 setTimeout 0 사용
+        const timer = setTimeout(() => scrollToBottom(true), 0);
+        return () => clearTimeout(timer);
+    }, [selectedTicketId, scrollToBottom]);
+
+    // 새 메시지 도착 시 스마트 스크롤
+    useEffect(() => {
+        if (messages.length === 0) return;
+        if (isAtBottom()) {
+            scrollToBottom();
+            setHasNewMessage(false);
+        } else {
+            setHasNewMessage(true);
+        }
+    }, [messages]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const handleScrollToNewMessage = () => {
+        scrollToBottom();
+        setHasNewMessage(false);
     };
 
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+    const handleScroll = () => {
+        if (isAtBottom()) {
+            setHasNewMessage(false);
+        }
+    };
 
     const isAuthor = user?.id === ticket?.requesting_user_id;
 
@@ -158,7 +192,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
             </div>
 
             {/* Messages */}
-            <div className="chat-messages">
+            <div className="chat-messages" ref={chatMessagesRef} onScroll={handleScroll}>
+                {hasNewMessage && (
+                    <button className="new-message-toast" onClick={handleScrollToNewMessage}>
+                        새 메시지 ↓
+                    </button>
+                )}
                 <div className="message-wrapper user-req">
                     <div className="message-bubble req-bubble">
                         <p className="msg-text">{ticket.description}</p>
