@@ -1,4 +1,4 @@
-# CS_talk 프로젝트 개발 현황 (2026-03-05 기준)
+# CS_talk 프로젝트 개발 현황 (2026-03-05 업데이트)
 
 ## 🌐 배포 정보
 - **프론트엔드**: [Cloudflare Pages](https://cs-chat-f3o.pages.dev) — `git push`시 자동 배포
@@ -17,6 +17,7 @@ CS_talk/
 │   │   ├── auth/          # LoginPage 등 인증 UI
 │   │   ├── chat/          # ChatArea.tsx / ChatArea.css
 │   │   ├── layout/        # MainLayout.tsx / MainLayout.css
+│   │   ├── onboarding/    # OnboardingView.tsx / OnboardingView.css (이름 강제 입력 온보딩)
 │   │   ├── profile/       # ProfileSettings.tsx (이름 설정 모달)
 │   │   └── ticket/        # TicketList.tsx / TicketTabs.tsx / TicketList.css / TicketModal.css
 │   ├── store/
@@ -114,7 +115,7 @@ CS_talk/
 - [ ] 안읽음 배지 로직이 실제 2명 이상 사용자 환경에서 정확히 작동하는지 검증
 
 ### 향후 개선 예정
-- [ ] 사용자 이름 설정을 강제하는 온보딩 플로우 (현재 full_name이 null이면 email 폴백)
+- [x] 사용자 이름 설정을 강제하는 온보딩 플로우 — `OnboardingView.tsx` 신규 구현 완료
 - [ ] 채팅 스크롤 개선 (새 메시지 도착 시 자동 스크롤 → 현재 맨 아래 있을 때만 동작하도록)
 - [ ] 업무 검색 기능
 - [ ] 전체 사용자 목록 관리 (Admin 페이지)
