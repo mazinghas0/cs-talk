@@ -3,7 +3,7 @@ import './TicketList.css';
 import './TicketModal.css';
 import { useTicketStore } from '../../store/ticketStore';
 import { TicketTabs } from './TicketTabs';
-import { Clock, Plus, X, RefreshCw } from 'lucide-react';
+import { Clock, Plus, X, RefreshCw, Search } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useAuthStore } from '../../store/authStore';
@@ -20,6 +20,9 @@ export const TicketList: React.FC = () => {
     const [newPriority, setNewPriority] = useState<TicketPriority>('medium');
     const [newImage, setNewImage] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Search state
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Pull-to-refresh state
     const [pullDistance, setPullDistance] = useState(0);
@@ -57,7 +60,14 @@ export const TicketList: React.FC = () => {
         setPullDistance(0);
     };
 
-    const filteredTickets = tickets.filter(t => t.status === activeTab);
+    const q = searchQuery.trim().toLowerCase();
+    const filteredTickets = tickets
+        .filter(t => t.status === activeTab)
+        .filter(t =>
+            !q ||
+            t.title.toLowerCase().includes(q) ||
+            t.description.toLowerCase().includes(q)
+        );
 
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -104,6 +114,23 @@ export const TicketList: React.FC = () => {
 
             <TicketTabs />
 
+            {/* 검색창 */}
+            <div className="search-bar">
+                <Search size={15} className="search-icon" />
+                <input
+                    type="text"
+                    className="search-input"
+                    placeholder="제목 또는 내용으로 검색..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                    <button className="search-clear-btn" onClick={() => setSearchQuery('')}>
+                        <X size={14} />
+                    </button>
+                )}
+            </div>
+
             {/* Pull-to-refresh indicator */}
             {pullDistance > 0 && (
                 <div className="pull-indicator" style={{ height: pullDistance }}>
@@ -121,7 +148,9 @@ export const TicketList: React.FC = () => {
                 {isLoadingData ? (
                     <div className="empty-state">데이터를 불러오는 중...</div>
                 ) : filteredTickets.length === 0 ? (
-                    <div className="empty-state">해당 상태의 티켓이 없습니다.</div>
+                    <div className="empty-state">
+                        {searchQuery.trim() ? `"${searchQuery.trim()}" 검색 결과가 없습니다.` : '해당 상태의 티켓이 없습니다.'}
+                    </div>
                 ) : (
                     filteredTickets.map(ticket => (
                         <div
