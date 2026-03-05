@@ -8,6 +8,7 @@ interface Profile {
     full_name: string | null;
     avatar_url: string | null;
     role: string;
+    created_at?: string;
 }
 
 interface AuthStore {
@@ -15,6 +16,8 @@ interface AuthStore {
     session: Session | null;
     profile: Profile | null;
     isLoading: boolean;
+    isAdmin: boolean;
+    allProfiles: Profile[];
 
     initialize: () => void;
     setUser: (user: User | null) => void;
@@ -22,6 +25,8 @@ interface AuthStore {
     signOut: () => Promise<void>;
     fetchProfile: (id: string) => Promise<void>;
     updateProfile: (updates: Partial<Profile>) => Promise<void>;
+    fetchAllProfiles: () => Promise<void>;
+    updateUserRole: (targetId: string, newRole: 'user' | 'admin') => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -29,6 +34,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     session: null,
     profile: null,
     isLoading: true,
+    allProfiles: [],
+    get isAdmin() { return get().profile?.role === 'admin'; },
 
     initialize: async () => {
         try {
@@ -92,5 +99,35 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         set((state) => ({
             profile: state.profile ? { ...state.profile, ...updates } : null
         }));
-    }
+    },
+
+    fetchAllProfiles: async () => {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .order('created_at', { ascending: true });
+
+        if (!error && data) {
+            set({ allProfiles: data as Profile[] });
+        }
+    },
+
+    updateUserRole: async (targetId, newRole) => {
+        const { error } = await supabase
+            .from('profiles')
+            .update({ role: newRole })
+            .eq('id', targetId);
+
+        if (error) throw error;
+
+        set((state) => ({
+            allProfiles: state.allProfiles.map(p =>
+                p.id === targetId ? { ...p, role: newRole } : p
+            ),
+            // 본인 role 변경 시 profile도 업데이트
+            profile: state.profile?.id === targetId
+                ? { ...state.profile, role: newRole }
+                : state.profile,
+        }));
+    },
 }));
