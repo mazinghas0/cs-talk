@@ -5,12 +5,47 @@
     display: flex;
     height: 100vh;
     height: 100dvh;
-    /* dynamic viewport for mobile browsers */
     width: 100vw;
     overflow: hidden;
     background-image:
         radial-gradient(circle at top right, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
         radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+}
+
+/* ===================================
+   워크스페이스 없음 안내 화면
+   =================================== */
+.empty-workspace-screen {
+    justify-content: center;
+    align-items: center;
+}
+
+.empty-workspace-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2rem;
+    text-align: center;
+    max-width: 280px;
+}
+
+.empty-workspace-icon {
+    font-size: 2.8rem;
+    margin-bottom: 0.25rem;
+}
+
+.empty-workspace-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.empty-workspace-desc {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem;
 }
 
 /* ===================================
@@ -88,11 +123,10 @@
 }
 
 /* ===================================
-   MOBILE OVERRIDES (is-mobile class set by JS)
+   MOBILE OVERRIDES
    =================================== */
 .layout-container.is-mobile {
     flex-direction: column;
-    /* safe-area-bottom을 고려한 패딩 */
     padding-bottom: calc(60px + var(--safe-area-bottom));
 }
 
@@ -105,10 +139,8 @@
 .layout-container.is-mobile .pane-content {
     width: 100%;
     flex: 1;
-    /* No padding-bottom needed when chat is fullscreen */
 }
 
-/* When chat is open on mobile, remove the bottom nav padding */
 .layout-container.is-mobile:has(.pane-content) {
     padding-bottom: 0;
 }
@@ -157,19 +189,50 @@
 }
 
 /* ===================================
-   MOBILE SLIDE ANIMATIONS
+   모바일 워크스페이스 전환 시트
    =================================== */
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-    }
-
-    to {
-        transform: translateX(0);
-    }
+.workspace-mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 300;
+    display: flex;
+    align-items: flex-end;
 }
 
-/* Chat pane slides in from the right on mobile */
+.workspace-mobile-sheet {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--glass-border);
+    border-radius: 20px 20px 0 0;
+    padding: 1.5rem 1.5rem calc(1.5rem + var(--safe-area-bottom));
+    width: 100%;
+    animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.workspace-mobile-title {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 1rem;
+}
+
+/* ===================================
+   ANIMATIONS
+   =================================== */
+@keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
 .is-mobile .pane-content {
     animation: slideInRight 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
 }

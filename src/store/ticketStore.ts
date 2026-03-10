@@ -3,19 +3,28 @@ import { Ticket, TicketStatus, TicketPriority, Message } from '../types/ticket';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from './authStore';
 
+// 실시간 메시지 이벤트 페이로드 타입 (profiles join 없이 DB 컬럼만)
+interface RealtimeMessagePayload {
+    id: string;
+    ticket_id: string;
+    user_id: string;
+    content: string;
+    is_internal_note: boolean;
+    is_resolution: boolean;
+    image_url: string | null;
+    created_at: string;
+    thread_parent_id: string | null;
+}
+
 interface TicketStore {
-    // Data
     tickets: Ticket[];
     messages: Message[];
-
-    // UI State
     activeTab: TicketStatus;
     selectedTicketId: string | null;
     isLoadingData: boolean;
     isSubscribed: boolean;
     unreadCounts: Record<string, number>;
 
-    // Actions
     fetchTickets: () => Promise<void>;
     fetchUnreadCounts: () => Promise<void>;
     markAsRead: (ticketId: string) => Promise<void>;
@@ -24,17 +33,13 @@ interface TicketStore {
     deleteTicket: (id: string) => Promise<void>;
     updateTicket: (id: string, updates: Partial<Ticket>) => Promise<void>;
     requestResolution: (id: string) => Promise<void>;
-
-    // Message Actions
     fetchMessages: (ticketId: string) => Promise<void>;
     sendMessage: (ticketId: string, content: string, userId: string, isInternal?: boolean, imageUrl?: string) => Promise<void>;
     uploadImage: (file: File) => Promise<string>;
-
     setActiveTab: (tab: TicketStatus) => void;
     setSelectedTicketId: (id: string | null) => void;
     subscribeToChanges: () => (() => void);
 }
-
 
 export const useTicketStore = create<TicketStore>((set, get) => ({
     tickets: [],
@@ -69,32 +74,32 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // 1. Get last read times
-        const { data: readData } = await supabase
-            .from('profiles_tickets_reads')
-            .select('ticket_id, last_read_at')
-            .eq('profile_id', user.id);
-
-        const readMap: Record<string, string> = {};
-        readData?.forEach(r => readMap[r.ticket_id] = r.last_read_at);
-
-        // 2. Count messages after last read for each ticket
-        const counts: Record<string, number> = {};
         const tickets = get().tickets;
-
-        for (const ticket of tickets) {
-            const lastRead = readMap[ticket.id] || '1970-01-01T00:00:00Z';
-            const { count, error } = await supabase
-                .from('messages')
-                .select('*', { count: 'exact', head: true })
-                .eq('ticket_id', ticket.id)
-                .gt('created_at', lastRead)
-                .neq('user_id', user.id); // Don't count my own messages as unread
-
-            if (!error) {
-                counts[ticket.id] = count || 0;
-            }
+        if (tickets.length === 0) {
+            set({ unreadCounts: {} });
+            return;
         }
+
+        const ticketIds = tickets.map(t => t.id);
+
+        // N+1 쿼리 해결: 티켓마다 개별 요청 대신 DB 함수 1번 호출로 전부 처리
+        const { data, error } = await supabase
+            .rpc('get_unread_counts', {
+                p_user_id: user.id,
+                p_ticket_ids: ticketIds,
+            });
+
+        if (error) {
+            console.error('Error fetching unread counts:', error);
+            return;
+        }
+
+        // 모든 티켓을 0으로 초기화한 뒤 실제 카운트 적용
+        const counts: Record<string, number> = {};
+        tickets.forEach(t => { counts[t.id] = 0; });
+        (data as { ticket_id: string; unread_count: number }[] | null)?.forEach(row => {
+            counts[row.ticket_id] = Number(row.unread_count);
+        });
 
         set({ unreadCounts: counts });
     },
@@ -105,7 +110,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
 
         const now = new Date().toISOString();
 
-        // Optimistic update
+        // 낙관적 업데이트 (화면 먼저 0으로 변경)
         set((state) => ({
             unreadCounts: { ...state.unreadCounts, [ticketId]: 0 }
         }));
@@ -124,9 +129,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     createTicket: async (title, description, priority, userId, workspaceId, imageUrl) => {
         const { data, error } = await supabase
             .from('tickets')
-            .insert([
-                { title, description, priority, requesting_user_id: userId, workspace_id: workspaceId, status: 'in_progress', image_url: imageUrl }
-            ])
+            .insert([{ title, description, priority, requesting_user_id: userId, workspace_id: workspaceId, status: 'in_progress', image_url: imageUrl }])
             .select()
             .single();
 
@@ -137,15 +140,13 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
 
         if (data) {
             set((state) => {
-                const isDuplicate = state.tickets.some(t => t.id === data.id);
-                if (isDuplicate) return state;
+                if (state.tickets.some(t => t.id === (data as Ticket).id)) return state;
                 return { tickets: [data as Ticket, ...state.tickets] };
             });
         }
     },
 
     updateTicketStatus: async (id, status) => {
-        // Optimistic update
         const prevTickets = get().tickets;
         const updates = status === 'in_progress' ? { status, resolve_requested: false } : { status };
         set((state) => ({
@@ -159,7 +160,6 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
 
         if (error) {
             console.error('Error updating status:', error);
-            // Rollback
             set({ tickets: prevTickets });
             throw error;
         }
@@ -206,16 +206,14 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         if (error) {
             console.error('Error fetching messages:', error);
         } else {
-            set({ messages: data as any[] });
+            set({ messages: data as Message[] });
         }
     },
 
     sendMessage: async (ticketId, content, userId, isInternal = false, imageUrl) => {
         const { data, error } = await supabase
             .from('messages')
-            .insert([
-                { ticket_id: ticketId, user_id: userId, content, is_internal_note: isInternal, image_url: imageUrl }
-            ])
+            .insert([{ ticket_id: ticketId, user_id: userId, content, is_internal_note: isInternal, image_url: imageUrl }])
             .select(`*, profiles:user_id(full_name, email)`)
             .single();
 
@@ -226,9 +224,8 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
 
         if (data) {
             set((state) => {
-                // Prevent duplicate if already added by real-time
-                if (state.messages.find(m => m.id === data.id)) return state;
-                return { messages: [...state.messages, data as any] };
+                if (state.messages.find(m => m.id === (data as Message).id)) return state;
+                return { messages: [...state.messages, data as Message] };
             });
         }
     },
@@ -236,11 +233,10 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     uploadImage: async (file: File) => {
         const fileExt = file.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `${fileName}`;
 
         const { error: uploadError } = await supabase.storage
             .from('attachments')
-            .upload(filePath, file);
+            .upload(fileName, file);
 
         if (uploadError) {
             console.error('Error uploading image:', uploadError);
@@ -249,12 +245,13 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
 
         const { data } = supabase.storage
             .from('attachments')
-            .getPublicUrl(filePath);
+            .getPublicUrl(fileName);
 
         return data.publicUrl;
     },
 
     setActiveTab: (activeTab) => set({ activeTab, selectedTicketId: null, messages: [] }),
+
     setSelectedTicketId: (selectedTicketId) => {
         set({ selectedTicketId });
         if (selectedTicketId) {
@@ -264,10 +261,10 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     },
 
     subscribeToChanges: () => {
-        if (get().isSubscribed) return () => { };
+        if (get().isSubscribed) return () => {};
 
         const { currentWorkspace } = useAuthStore.getState();
-        if (!currentWorkspace) return () => { };
+        if (!currentWorkspace) return () => {};
 
         console.log(`🔔 [Realtime] Subscribing to Workspace: ${currentWorkspace.name}...`);
 
@@ -284,36 +281,35 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
 
                 if (eventType === 'INSERT') {
                     set((state) => {
-                        if (state.tickets.some(t => t.id === newTicket.id)) return state;
+                        if (state.tickets.some(t => t.id === (newTicket as Ticket).id)) return state;
                         return { tickets: [newTicket as Ticket, ...state.tickets] };
                     });
                 } else if (eventType === 'UPDATE') {
                     set((state) => ({
-                        tickets: state.tickets.map(t => t.id === newTicket.id ? { ...t, ...newTicket } : t)
+                        tickets: state.tickets.map(t => t.id === (newTicket as Ticket).id ? { ...t, ...newTicket } : t)
                     }));
                 } else if (eventType === 'DELETE') {
                     set((state) => ({
-                        tickets: state.tickets.filter(t => t.id !== oldTicket.id),
-                        selectedTicketId: state.selectedTicketId === oldTicket.id ? null : state.selectedTicketId
+                        tickets: state.tickets.filter(t => t.id !== (oldTicket as Ticket).id),
+                        selectedTicketId: state.selectedTicketId === (oldTicket as Ticket).id ? null : state.selectedTicketId
                     }));
                 }
             })
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
-                const newMessage = payload.new as any;
+                const newMessage = payload.new as RealtimeMessagePayload;
                 const { data: { user } } = await supabase.auth.getUser();
 
-                // Show notification if:
-                // 1. Permission granted
-                // 2. Not my own message
+                // 내 메시지가 아니고 알림 권한이 있을 때 브라우저 알림 발송
                 if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && user && newMessage.user_id !== user.id) {
                     new Notification('CS Talk - 새 메시지', {
                         body: newMessage.content,
                         icon: '/icon-192.png',
-                        tag: newMessage.ticket_id // Group notifications by ticket
+                        tag: newMessage.ticket_id
                     });
                 }
 
                 if (newMessage.ticket_id === get().selectedTicketId) {
+                    // 현재 보고 있는 채팅방의 메시지 → profiles join 후 추가
                     const { data, error } = await supabase
                         .from('messages')
                         .select(`*, profiles:user_id(full_name, email)`)
@@ -322,14 +318,13 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
 
                     if (!error && data) {
                         set((state) => {
-                            if (state.messages.some(m => m.id === data.id)) return state;
-                            return { messages: [...state.messages, data] };
+                            if (state.messages.some(m => m.id === (data as Message).id)) return state;
+                            return { messages: [...state.messages, data as Message] };
                         });
-                        // Viewing this ticket, so mark as read
                         get().markAsRead(newMessage.ticket_id);
                     }
                 } else {
-                    // Not viewing, so increment unread count
+                    // 다른 채팅방 메시지 → 안읽음 배지 증가
                     set((state) => ({
                         unreadCounts: {
                             ...state.unreadCounts,
@@ -339,7 +334,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 }
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles_tickets_reads' }, async (payload) => {
-                const { new: newRead } = payload as any;
+                const newRead = payload.new as { profile_id: string; ticket_id: string; last_read_at: string } | undefined;
                 const { data: { user } } = await supabase.auth.getUser();
                 if (newRead && user && newRead.profile_id === user.id) {
                     set((state) => ({

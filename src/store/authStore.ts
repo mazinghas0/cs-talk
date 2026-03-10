@@ -40,10 +40,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     session: null,
     profile: null,
     isLoading: true,
+    // isAdmin을 명시적 state 필드로 관리
+    // (Zustand getter 패턴은 set() 호출 시 값이 굳어버리는 버그가 있음)
+    isAdmin: false,
     allProfiles: [],
     workspaces: [],
     currentWorkspace: null,
-    get isAdmin() { return get().profile?.role === 'admin'; },
 
     initialize: async () => {
         try {
@@ -63,7 +65,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                     await get().fetchProfile(session.user.id);
                     await get().fetchWorkspaces();
                 } else {
-                    set({ profile: null, workspaces: [], currentWorkspace: null });
+                    set({ profile: null, isAdmin: false, workspaces: [], currentWorkspace: null });
                 }
             });
         } catch (error) {
@@ -77,7 +79,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     signOut: async () => {
         await supabase.auth.signOut();
-        set({ user: null, session: null, profile: null });
+        set({ user: null, session: null, profile: null, isAdmin: false });
     },
 
     fetchProfile: async (id) => {
@@ -88,7 +90,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             .single();
 
         if (!error && data) {
-            set({ profile: data as Profile });
+            set({
+                profile: data as Profile,
+                isAdmin: data.role === 'admin',
+            });
         }
     },
 
@@ -107,7 +112,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         }
 
         set((state) => ({
-            profile: state.profile ? { ...state.profile, ...updates } : null
+            profile: state.profile ? { ...state.profile, ...updates } : null,
+            isAdmin: updates.role !== undefined ? updates.role === 'admin' : state.isAdmin,
         }));
     },
 
@@ -134,17 +140,20 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             allProfiles: state.allProfiles.map(p =>
                 p.id === targetId ? { ...p, role: newRole } : p
             ),
-            // 본인 role 변경 시 profile도 업데이트
             profile: state.profile?.id === targetId
                 ? { ...state.profile, role: newRole }
                 : state.profile,
+            // 본인 role이 바뀐 경우 isAdmin도 즉시 반영
+            isAdmin: state.profile?.id === targetId ? newRole === 'admin' : state.isAdmin,
         }));
     },
+
     fetchWorkspaces: async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // 사용자가 멤버로 속한 워크스페이스 ID 목록 조회
+        // 멤버로 속한 워크스페이스 ID 조회
+        // (DB 트리거로 owner도 자동으로 workspace_members에 등록됨)
         const { data: memberData } = await supabase
             .from('workspace_members')
             .select('workspace_id')
@@ -152,22 +161,28 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
         const workspaceIds = memberData?.map(m => m.workspace_id) || [];
 
-        // 워크스페이스 상세 정보 조회 (소유하고 있거나 멤버인 경우)
+        if (workspaceIds.length === 0) {
+            set({ workspaces: [] });
+            return;
+        }
+
+        // 문자열 조합 방식 제거 → 안전한 .in() 방식 사용
         const { data, error } = await supabase
             .from('workspaces')
             .select('*')
-            .or(`owner_id.eq.${user.id}${workspaceIds.length > 0 ? `,id.in.(${workspaceIds.join(',')})` : ''}`)
+            .in('id', workspaceIds)
             .order('created_at', { ascending: false });
 
         if (!error && data) {
             set({ workspaces: data as Workspace[] });
-            // 기본 워크스페이스 설정 (첫 번째 또는 기존 선택 유지)
             if (data.length > 0 && !get().currentWorkspace) {
                 set({ currentWorkspace: data[0] as Workspace });
             }
         }
     },
+
     setCurrentWorkspace: (workspace) => set({ currentWorkspace: workspace }),
+
     createWorkspace: async (name) => {
         const user = get().user;
         if (!user) return;
@@ -183,9 +198,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             throw error;
         }
 
-        set((state) => ({
-            workspaces: [data as Workspace, ...state.workspaces],
-            currentWorkspace: data as Workspace
-        }));
+        // DB 트리거(on_workspace_created)가 workspace_members에 자동으로 owner를 등록함
+        // fetchWorkspaces로 최신 목록을 다시 불러옴
+        await get().fetchWorkspaces();
+        // 새로 만든 워크스페이스를 현재 공간으로 설정
+        set({ currentWorkspace: data as Workspace });
     },
 }));

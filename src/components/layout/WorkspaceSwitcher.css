@@ -6,6 +6,14 @@
     width: 100%;
 }
 
+/* 가로 배치 모드 (모바일 시트용) */
+.workspace-switcher.horizontal {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
 .workspace-item {
     width: clamp(36px, 10vw, 44px);
     height: clamp(36px, 10vw, 44px);
@@ -21,6 +29,7 @@
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
+    flex-shrink: 0;
 }
 
 .workspace-item:hover {
@@ -36,7 +45,8 @@
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
-.workspace-item.active::before {
+/* 데스크톱 사이드바: 활성 워크스페이스 왼쪽 인디케이터 */
+.workspace-switcher:not(.horizontal) .workspace-item.active::before {
     content: '';
     position: absolute;
     left: -12px;
@@ -56,4 +66,89 @@
     color: var(--accent-secondary);
     border-color: var(--accent-secondary);
     border-style: solid;
+}
+
+/* ===================================
+   워크스페이스 만들기 인라인 폼
+   (window.prompt 대체)
+   =================================== */
+.workspace-create-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.workspace-create-form.horizontal {
+    flex-direction: row;
+    align-items: center;
+    flex: 1;
+}
+
+.workspace-name-input {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--accent-primary);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    padding: 0.45rem 0.65rem;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s;
+}
+
+.workspace-name-input::placeholder {
+    color: var(--text-secondary);
+}
+
+.workspace-name-input:focus {
+    border-color: var(--accent-secondary);
+}
+
+.workspace-name-input:disabled {
+    opacity: 0.5;
+}
+
+.workspace-create-actions {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.workspace-action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+
+.workspace-action-btn.confirm {
+    background: var(--accent-primary);
+    color: white;
+}
+
+.workspace-action-btn.confirm:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.workspace-action-btn.confirm:not(:disabled):hover {
+    opacity: 0.85;
+}
+
+.workspace-action-btn.cancel {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+}
+
+.workspace-action-btn.cancel:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--text-primary);
 }
