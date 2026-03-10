@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { User, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
+import { requestNotificationPermission } from '../../utils/pushNotification';
 import './OnboardingView.css';
 
 export const OnboardingView: React.FC = () => {
@@ -22,7 +23,8 @@ export const OnboardingView: React.FC = () => {
 
         try {
             await updateProfile({ full_name: trimmed });
-            // App.tsx가 profile.full_name 변화를 감지해 자동으로 MainLayout으로 전환됩니다.
+            // 알림 권한 요청 (강제하지 않고 권장)
+            await requestNotificationPermission();
         } catch (err: any) {
             setError('저장에 실패했습니다. 다시 시도해주세요.');
         } finally {

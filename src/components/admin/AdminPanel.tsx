@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { X, Shield, Search, Loader2 } from 'lucide-react';
+import { AIBriefing } from './AIBriefing';
 import './AdminPanel.css';
 
 interface AdminPanelProps {
@@ -61,6 +62,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                     <button className="admin-close-btn" onClick={onClose}>
                         <X size={20} />
                     </button>
+                </div>
+
+                {/* AI Briefing Section (Premium) */}
+                <div style={{ padding: '0 1.5rem 1.5rem 1.5rem' }}>
+                    <AIBriefing />
                 </div>
 
                 {/* Search */}

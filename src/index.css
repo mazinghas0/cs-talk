@@ -5,24 +5,41 @@
   --bg-primary: #0a0a0a;
   --bg-secondary: #141414;
   --bg-tertiary: #1f1f1f;
-  
+
   --text-primary: #ededed;
   --text-secondary: #a1a1aa;
-  
-  --accent-primary: #6366f1; /* Indigo */
+
+  --accent-primary: #6366f1;
+  /* Indigo */
   --accent-primary-hover: #4f46e5;
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-danger: #ef4444;
-  
+
   /* Glassmorphism */
   --glass-bg: rgba(20, 20, 20, 0.5);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  
+
   /* Layout constraints */
   --sidebar-width: 80px;
   --list-width: 320px;
+  --chat-max-width: 1200px;
+  --touch-target: 48px;
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (max-width: 1200px) {
+  :root {
+    --list-width: 280px;
+  }
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-width: 72px;
+    --list-width: 260px;
+  }
 }
 
 * {
@@ -50,13 +67,16 @@ body {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--bg-tertiary);
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
 }

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { User, Session } from '@supabase/supabase-js';
+import { Workspace } from '../types/ticket';
 
 interface Profile {
     id: string;
@@ -18,6 +19,8 @@ interface AuthStore {
     isLoading: boolean;
     isAdmin: boolean;
     allProfiles: Profile[];
+    workspaces: Workspace[];
+    currentWorkspace: Workspace | null;
 
     initialize: () => void;
     setUser: (user: User | null) => void;
@@ -27,6 +30,8 @@ interface AuthStore {
     updateProfile: (updates: Partial<Profile>) => Promise<void>;
     fetchAllProfiles: () => Promise<void>;
     updateUserRole: (targetId: string, newRole: 'user' | 'admin') => Promise<void>;
+    fetchWorkspaces: () => Promise<void>;
+    setCurrentWorkspace: (workspace: Workspace | null) => void;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -35,6 +40,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     profile: null,
     isLoading: true,
     allProfiles: [],
+    workspaces: [],
+    currentWorkspace: null,
     get isAdmin() { return get().profile?.role === 'admin'; },
 
     initialize: async () => {
@@ -44,6 +51,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
             if (session?.user) {
                 await get().fetchProfile(session.user.id);
+                await get().fetchWorkspaces();
             }
 
             set({ isLoading: false });
@@ -52,8 +60,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 set({ session, user: session?.user || null });
                 if (session?.user) {
                     await get().fetchProfile(session.user.id);
+                    await get().fetchWorkspaces();
                 } else {
-                    set({ profile: null });
+                    set({ profile: null, workspaces: [], currentWorkspace: null });
                 }
             });
         } catch (error) {
@@ -130,4 +139,32 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 : state.profile,
         }));
     },
+    fetchWorkspaces: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // 사용자가 멤버로 속한 워크스페이스 ID 목록 조회
+        const { data: memberData } = await supabase
+            .from('workspace_members')
+            .select('workspace_id')
+            .eq('user_id', user.id);
+
+        const workspaceIds = memberData?.map(m => m.workspace_id) || [];
+
+        // 워크스페이스 상세 정보 조회 (소유하고 있거나 멤버인 경우)
+        const { data, error } = await supabase
+            .from('workspaces')
+            .select('*')
+            .or(`owner_id.eq.${user.id}${workspaceIds.length > 0 ? `,id.in.(${workspaceIds.join(',')})` : ''}`)
+            .order('created_at', { ascending: false });
+
+        if (!error && data) {
+            set({ workspaces: data as Workspace[] });
+            // 기본 워크스페이스 설정 (첫 번째 또는 기존 선택 유지)
+            if (data.length > 0 && !get().currentWorkspace) {
+                set({ currentWorkspace: data[0] as Workspace });
+            }
+        }
+    },
+    setCurrentWorkspace: (workspace) => set({ currentWorkspace: workspace }),
 }));

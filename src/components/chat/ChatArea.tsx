@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './ChatArea.css';
 import { useTicketStore } from '../../store/ticketStore';
 import { useAuthStore } from '../../store/authStore';
-import { Send, FilePlus, MessageSquareWarning, Edit2, Trash2, X, ChevronLeft } from 'lucide-react';
+import { Send, FilePlus, MessageSquareWarning, Edit2, Trash2, X, ChevronLeft, Share2 } from 'lucide-react';
+import { ShareTicketModal } from './ShareTicketModal';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
@@ -22,6 +23,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
 
     // Edit Modal States
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [editTitle, setEditTitle] = useState('');
     const [editDesc, setEditDesc] = useState('');
     const [editPriority, setEditPriority] = useState<any>('medium');
@@ -186,6 +188,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                                     )}
                                 </>
                             )}
+                            <button className="icon-btn-header share-btn" onClick={() => setIsShareModalOpen(true)} title="고객에게 공유">
+                                <Share2 size={16} />
+                            </button>
                         </>
                     )}
                 </div>
@@ -323,6 +328,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                     </div>
                 </div>
             )}
+
+            {/* Share Ticket Modal */}
+            <ShareTicketModal
+                ticket={ticket}
+                isOpen={isShareModalOpen}
+                onClose={() => setIsShareModalOpen(false)}
+            />
         </div>
     );
 };

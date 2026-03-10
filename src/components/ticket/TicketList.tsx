@@ -3,15 +3,124 @@ import './TicketList.css';
 import './TicketModal.css';
 import { useTicketStore } from '../../store/ticketStore';
 import { TicketTabs } from './TicketTabs';
-import { Clock, Plus, X, RefreshCw, Search } from 'lucide-react';
+import { Clock, Plus, X, RefreshCw, Search, Check } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useAuthStore } from '../../store/authStore';
-import { TicketPriority } from '../../types/ticket';
+import { TicketPriority, Ticket } from '../../types/ticket';
+
+interface SwipeableTicketItemProps {
+    ticket: Ticket;
+    isSelected: boolean;
+    unreadCount: number;
+    onSelect: () => void;
+    canSwipe: boolean;
+}
+
+const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSelected, unreadCount, onSelect, canSwipe }) => {
+    const { updateTicketStatus } = useTicketStore();
+    const [swipeX, setSwipeX] = useState(0);
+    const startX = useRef(0);
+    const startY = useRef(0);
+    const isSwiping = useRef(false);
+    const isVerticalScroll = useRef(false);
+    const SWIPE_THRESHOLD = 100;
+
+    const handleTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
+        if (!canSwipe) return;
+        const pageX = 'touches' in e ? e.touches[0].pageX : e.pageX;
+        const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
+        startX.current = pageX;
+        startY.current = pageY;
+        isSwiping.current = true;
+        isVerticalScroll.current = false;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent | React.MouseEvent) => {
+        if (!isSwiping.current || isVerticalScroll.current) return;
+
+        const pageX = 'touches' in e ? e.touches[0].pageX : e.pageX;
+        const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
+
+        const deltaX = pageX - startX.current;
+        const deltaY = pageY - startY.current;
+
+        // Check if user is scrolling vertically
+        if (!isVerticalScroll.current && Math.abs(deltaY) > Math.abs(deltaX)) {
+            isVerticalScroll.current = true;
+            setSwipeX(0);
+            return;
+        }
+
+        if (deltaX > 0) {
+            // Horizontal swipe to the right
+            if ('touches' in e) e.preventDefault(); // Prevent accidental vertical scroll during swipe
+            setSwipeX(Math.min(deltaX, 150)); // Cap the visual movement
+        } else {
+            setSwipeX(0);
+        }
+    };
+
+    const handleTouchEnd = async () => {
+        if (!isSwiping.current) return;
+        isSwiping.current = false;
+
+        if (swipeX >= SWIPE_THRESHOLD) {
+            // Trigger complete action
+            try {
+                await updateTicketStatus(ticket.id, 'resolved');
+            } catch (err) {
+                console.error('Swipe complete failed:', err);
+                setSwipeX(0);
+            }
+        } else {
+            // Reset position
+            setSwipeX(0);
+        }
+    };
+
+    return (
+        <div className="ticket-item-wrapper">
+            <div className={`swipe-bg ${swipeX > 20 ? 'visible' : ''}`}>
+                <div className="swipe-content" style={{ opacity: Math.min(swipeX / SWIPE_THRESHOLD, 1) }}>
+                    <Check size={20} />
+                    <span>완료 처리</span>
+                </div>
+            </div>
+            <div
+                className={`ticket-item ${isSelected ? 'selected' : ''}`}
+                style={{ transform: `translateX(${swipeX}px)`, zIndex: 1 }}
+                onClick={onSelect}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onMouseDown={handleTouchStart}
+                onMouseMove={handleTouchMove}
+                onMouseUp={handleTouchEnd}
+                onMouseLeave={handleTouchEnd}
+            >
+                <div className="ticket-header">
+                    <span className={`priority-badge ${ticket.priority}`}>
+                        {ticket.priority.toUpperCase()}
+                    </span>
+                    <span className="time">
+                        <Clock size={12} />
+                        {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true, locale: ko })}
+                    </span>
+                    {unreadCount > 0 && (
+                        <span className="unread-badge">{unreadCount}</span>
+                    )}
+                </div>
+                <h3 className="ticket-title">{ticket.title}</h3>
+                <p className="ticket-desc">{ticket.description}</p>
+            </div>
+        </div>
+    );
+};
 
 export const TicketList: React.FC = () => {
     const { tickets, activeTab, selectedTicketId, setSelectedTicketId, fetchTickets, createTicket, isLoadingData, unreadCounts } = useTicketStore();
-    const { user } = useAuthStore();
+    const { user, currentWorkspace } = useAuthStore();
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -31,8 +140,10 @@ export const TicketList: React.FC = () => {
     const listBodyRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        fetchTickets();
-    }, [fetchTickets]);
+        if (currentWorkspace) {
+            fetchTickets();
+        }
+    }, [fetchTickets, currentWorkspace]);
 
     // --- Pull-to-Refresh (on the list body only) ---
     const handleListTouchStart = (e: React.TouchEvent) => {
@@ -71,7 +182,7 @@ export const TicketList: React.FC = () => {
 
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user || !newTitle.trim() || !newDesc.trim()) return;
+        if (!user || !currentWorkspace || !newTitle.trim() || !newDesc.trim()) return;
 
         setIsSubmitting(true);
         try {
@@ -79,7 +190,7 @@ export const TicketList: React.FC = () => {
             if (newImage) {
                 imageUrl = await useTicketStore.getState().uploadImage(newImage);
             }
-            await createTicket(newTitle, newDesc, newPriority, user.id, imageUrl);
+            await createTicket(newTitle, newDesc, newPriority, user.id, currentWorkspace.id, imageUrl);
             setIsModalOpen(false);
             setNewTitle('');
             setNewDesc('');
@@ -153,26 +264,14 @@ export const TicketList: React.FC = () => {
                     </div>
                 ) : (
                     filteredTickets.map(ticket => (
-                        <div
+                        <SwipeableTicketItem
                             key={ticket.id}
-                            className={`ticket-item ${selectedTicketId === ticket.id ? 'selected' : ''}`}
-                            onClick={() => setSelectedTicketId(ticket.id)}
-                        >
-                            <div className="ticket-header">
-                                <span className={`priority-badge ${ticket.priority}`}>
-                                    {ticket.priority.toUpperCase()}
-                                </span>
-                                <span className="time">
-                                    <Clock size={12} />
-                                    {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true, locale: ko })}
-                                </span>
-                                {(unreadCounts[ticket.id] ?? 0) > 0 && (
-                                    <span className="unread-badge">{unreadCounts[ticket.id]}</span>
-                                )}
-                            </div>
-                            <h3 className="ticket-title">{ticket.title}</h3>
-                            <p className="ticket-desc">{ticket.description}</p>
-                        </div>
+                            ticket={ticket}
+                            isSelected={selectedTicketId === ticket.id}
+                            unreadCount={unreadCounts[ticket.id] ?? 0}
+                            onSelect={() => setSelectedTicketId(ticket.id)}
+                            canSwipe={activeTab === 'in_progress'}
+                        />
                     ))
                 )}
             </div>

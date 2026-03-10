@@ -37,18 +37,94 @@
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: 12px;
-    padding: 1rem;
+    padding: 1.25rem 1rem;
     cursor: pointer;
     position: relative;
     overflow: hidden;
-    transition: background 0.2s ease-in-out, box-shadow 0.2s, border-color 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    touch-action: pan-y;
+}
+
+/* Ambient Glow per Priority */
+.ticket-item::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0.03;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.ticket-item.urgent::after {
+    background: linear-gradient(135deg, var(--accent-danger), transparent);
+    opacity: 0.08;
+}
+
+.ticket-item.high::after {
+    background: linear-gradient(135deg, var(--accent-warning), transparent);
+    opacity: 0.06;
+}
+
+.ticket-item.medium::after {
+    background: linear-gradient(135deg, var(--accent-success), transparent);
+    opacity: 0.04;
+}
+
+.ticket-item.low::after {
+    background: linear-gradient(135deg, var(--accent-primary), transparent);
+    opacity: 0.04;
+}
+
+.ticket-item:hover::after {
+    opacity: 0.12;
+}
+
+.ticket-item-wrapper {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+}
+
+.swipe-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--accent-success);
+    display: flex;
+    align-items: center;
+    padding-left: 1.5rem;
+    color: white;
+    font-weight: 700;
+    border-radius: 12px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 0;
+}
+
+.swipe-bg.visible {
+    opacity: 1;
+}
+
+.swipe-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
 }
 
 .ticket-item:hover {
-    background: rgba(40, 40, 40, 0.8);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    background: rgba(255, 255, 255, 0.03);
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .ticket-item.selected {
@@ -66,8 +142,7 @@
 }
 
 .unread-badge {
-    background: #ef4444;
-    /* red-500 */
+    background: var(--accent-danger);
     color: white;
     font-size: 0.7rem;
     font-weight: 700;
@@ -78,10 +153,28 @@
     align-items: center;
     justify-content: center;
     padding: 0 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
     position: absolute;
-    right: -5px;
-    top: -5px;
+    right: -2px;
+    top: -2px;
+    animation: badge-pulse 2s infinite;
+}
+
+@keyframes badge-pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+
+    70% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
 }
 
 .priority-badge {

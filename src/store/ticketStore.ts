@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Ticket, TicketStatus, TicketPriority, Message } from '../types/ticket';
 import { supabase } from '../lib/supabase';
+import { useAuthStore } from './authStore';
 
 interface TicketStore {
     // Data
@@ -18,7 +19,7 @@ interface TicketStore {
     fetchTickets: () => Promise<void>;
     fetchUnreadCounts: () => Promise<void>;
     markAsRead: (ticketId: string) => Promise<void>;
-    createTicket: (title: string, description: string, priority: TicketPriority, userId: string, imageUrl?: string) => Promise<void>;
+    createTicket: (title: string, description: string, priority: TicketPriority, userId: string, workspaceId: string, imageUrl?: string) => Promise<void>;
     updateTicketStatus: (id: string, status: TicketStatus) => Promise<void>;
     deleteTicket: (id: string) => Promise<void>;
     updateTicket: (id: string, updates: Partial<Ticket>) => Promise<void>;
@@ -45,10 +46,14 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     unreadCounts: {},
 
     fetchTickets: async () => {
+        const { currentWorkspace } = useAuthStore.getState();
+        if (!currentWorkspace) return;
+
         set({ isLoadingData: true });
         const { data, error } = await supabase
             .from('tickets')
             .select('*')
+            .eq('workspace_id', currentWorkspace.id)
             .order('created_at', { ascending: false });
 
         if (error) {
@@ -116,11 +121,11 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         if (error) console.error('Error marking as read:', error);
     },
 
-    createTicket: async (title, description, priority, userId, imageUrl) => {
+    createTicket: async (title, description, priority, userId, workspaceId, imageUrl) => {
         const { data, error } = await supabase
             .from('tickets')
             .insert([
-                { title, description, priority, requesting_user_id: userId, status: 'in_progress', image_url: imageUrl }
+                { title, description, priority, requesting_user_id: userId, workspace_id: workspaceId, status: 'in_progress', image_url: imageUrl }
             ])
             .select()
             .single();
@@ -261,11 +266,19 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     subscribeToChanges: () => {
         if (get().isSubscribed) return () => { };
 
-        console.log('🔔 [Realtime] Subscribing...');
+        const { currentWorkspace } = useAuthStore.getState();
+        if (!currentWorkspace) return () => { };
+
+        console.log(`🔔 [Realtime] Subscribing to Workspace: ${currentWorkspace.name}...`);
 
         const channel = supabase
-            .channel('db-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, (payload) => {
+            .channel(`db-changes-${currentWorkspace.id}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'tickets',
+                filter: `workspace_id=eq.${currentWorkspace.id}`
+            }, (payload) => {
                 console.log('📝 [Realtime] Ticket Change:', payload);
                 const { eventType, new: newTicket, old: oldTicket } = payload;
 
@@ -286,8 +299,19 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 }
             })
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
-                console.log('💬 [Realtime] Message Insert:', payload);
                 const newMessage = payload.new as any;
+                const { data: { user } } = await supabase.auth.getUser();
+
+                // Show notification if:
+                // 1. Permission granted
+                // 2. Not my own message
+                if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && user && newMessage.user_id !== user.id) {
+                    new Notification('CS Talk - 새 메시지', {
+                        body: newMessage.content,
+                        icon: '/icon-192.png',
+                        tag: newMessage.ticket_id // Group notifications by ticket
+                    });
+                }
 
                 if (newMessage.ticket_id === get().selectedTicketId) {
                     const { data, error } = await supabase

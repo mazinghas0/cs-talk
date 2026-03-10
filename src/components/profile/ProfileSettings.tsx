@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { X, Save, User as UserIcon } from 'lucide-react';
+import { X, Save, User as UserIcon, Bell, BellOff } from 'lucide-react';
 import './ProfileSettings.css';
 
 interface ProfileSettingsProps {
@@ -12,10 +12,16 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
     const { profile, updateProfile } = useAuthStore();
     const [fullName, setFullName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [notifPermission, setNotifPermission] = useState<NotificationPermission>(
+        typeof Notification !== 'undefined' ? Notification.permission : 'default'
+    );
 
     useEffect(() => {
         if (profile) {
             setFullName(profile.full_name || '');
+        }
+        if (typeof Notification !== 'undefined') {
+            setNotifPermission(Notification.permission);
         }
     }, [profile, isOpen]);
 
@@ -31,6 +37,23 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
             alert('프로필 저장에 실패했습니다.');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const requestNotificationPermission = async () => {
+        if (typeof Notification === 'undefined') return;
+
+        try {
+            const permission = await Notification.requestPermission();
+            setNotifPermission(permission);
+            if (permission === 'granted') {
+                new Notification('CS Talk', {
+                    body: '알림 설정이 완료되었습니다.',
+                    icon: '/icon-192.png'
+                });
+            }
+        } catch (err) {
+            console.error('Notification Error:', err);
         }
     };
 
@@ -62,6 +85,35 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
                             required
                         />
                         <p className="input-helper">입력하신 이름이 채팅방 발신자로 표시됩니다.</p>
+                    </div>
+
+                    <div className="form-group notification-group">
+                        <label>시스템 알림 설정</label>
+                        <div className="notification-status-box">
+                            <div className="status-info">
+                                {notifPermission === 'granted' ? (
+                                    <><Bell size={18} className="icon-granted" /> <span>알림 활성화됨</span></>
+                                ) : notifPermission === 'denied' ? (
+                                    <><BellOff size={18} className="icon-denied" /> <span>알림 차단됨</span></>
+                                ) : (
+                                    <><Bell size={18} /> <span>알림 비활성화됨</span></>
+                                )}
+                            </div>
+                            {notifPermission !== 'granted' && (
+                                <button
+                                    type="button"
+                                    className="btn-notif-request"
+                                    onClick={requestNotificationPermission}
+                                >
+                                    알림 권한 요청
+                                </button>
+                            )}
+                        </div>
+                        <p className="input-helper">
+                            {notifPermission === 'denied'
+                                ? '브라우저 설정에서 알림 권한을 직접 허용해야 합니다.'
+                                : '새 메시지가 도착했을 때 실시간 알림을 받습니다.'}
+                        </p>
                     </div>
 
                     <div className="modal-footer">
