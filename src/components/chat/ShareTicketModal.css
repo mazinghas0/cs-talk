@@ -124,6 +124,14 @@
     color: var(--text-secondary);
 }
 
+.qr-code-wrapper {
+    padding: 12px;
+    background: #ffffff;
+    border-radius: 12px;
+    display: inline-flex;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
 .btn-copy-full {
     flex: 1;
     background: var(--accent-success);

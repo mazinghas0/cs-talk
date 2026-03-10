@@ -33,9 +33,15 @@ DROP POLICY IF EXISTS "Anonymous users can send messages to their ticket" ON mes
 CREATE POLICY "Anonymous users can send messages to their ticket" ON messages
     FOR INSERT WITH CHECK (
         EXISTS (
-            SELECT 1 FROM tickets 
-            WHERE tickets.id = messages.ticket_id 
+            SELECT 1 FROM tickets
+            WHERE tickets.id = messages.ticket_id
             AND tickets.pin IS NOT NULL
             AND tickets.status != 'resolved'
         )
     );
+
+-- 6. messages.user_id를 nullable로 변경 (고객은 비회원이므로)
+ALTER TABLE messages ALTER COLUMN user_id DROP NOT NULL;
+
+-- 7. customer_name 컬럼 추가 (고객 이름 저장)
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS customer_name TEXT;

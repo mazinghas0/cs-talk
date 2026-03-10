@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { X, Save, User as UserIcon, Bell, BellOff } from 'lucide-react';
+import { X, Save, User as UserIcon, Bell, BellOff, LogOut } from 'lucide-react';
 import './ProfileSettings.css';
 
 interface ProfileSettingsProps {
@@ -9,7 +9,8 @@ interface ProfileSettingsProps {
 }
 
 export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClose }) => {
-    const { profile, updateProfile } = useAuthStore();
+    const { profile, updateProfile, signOut } = useAuthStore();
+    const [isSigningOut, setIsSigningOut] = useState(false);
     const [fullName, setFullName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [notifPermission, setNotifPermission] = useState<NotificationPermission>(
@@ -120,12 +121,26 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
                     </div>
 
                     <div className="modal-footer">
-                        <button type="button" className="btn-secondary" onClick={onClose} disabled={isSaving}>
-                            취소
+                        <button
+                            type="button"
+                            className="btn-logout"
+                            onClick={async () => {
+                                setIsSigningOut(true);
+                                await signOut();
+                            }}
+                            disabled={isSigningOut}
+                        >
+                            <LogOut size={16} />
+                            {isSigningOut ? '로그아웃 중...' : '로그아웃'}
                         </button>
-                        <button type="submit" className="btn-primary" disabled={isSaving}>
-                            {isSaving ? '저장 중...' : <><Save size={18} /> 저장하기</>}
-                        </button>
+                        <div className="modal-footer-right">
+                            <button type="button" className="btn-secondary" onClick={onClose} disabled={isSaving}>
+                                취소
+                            </button>
+                            <button type="submit" className="btn-primary" disabled={isSaving}>
+                                {isSaving ? '저장 중...' : <><Save size={18} /> 저장하기</>}
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>

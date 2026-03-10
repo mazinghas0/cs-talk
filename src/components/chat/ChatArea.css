@@ -407,3 +407,44 @@
     color: var(--accent-warning);
     cursor: pointer;
 }
+
+.pending-image-preview {
+    position: relative;
+    margin: 0 1.5rem 0.5rem 1.5rem;
+    display: inline-flex;
+}
+
+.pending-image-preview img {
+    max-height: 80px;
+    max-width: 200px;
+    border-radius: 8px;
+    border: 2px solid var(--accent-primary);
+    object-fit: cover;
+}
+
+.remove-image-btn {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--glass-border);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-primary);
+    padding: 0;
+}
+
+.icon-btn.uploading {
+    opacity: 0.5;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}

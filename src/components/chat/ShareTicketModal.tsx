@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './ShareTicketModal.css';
-import { X, Copy, Check, QrCode } from 'lucide-react';
+import { X, Copy, Check } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Ticket } from '../../types/ticket';
 import { useTicketStore } from '../../store/ticketStore';
 
@@ -79,8 +80,16 @@ export const ShareTicketModal: React.FC<ShareTicketModalProps> = ({ ticket, isOp
 
                     {ticket.pin && (
                         <div className="qr-preview-placeholder">
-                            <QrCode size={48} color="var(--accent-primary)" />
-                            <p>QR 코드가 활성화되었습니다.<br />(실제 서비스에서는 QR 이미지로 대체됩니다)</p>
+                            <div className="qr-code-wrapper">
+                                <QRCodeSVG
+                                    value={`${shareUrl}?pin=${ticket.pin}`}
+                                    size={160}
+                                    bgColor="#ffffff"
+                                    fgColor="#1a1d27"
+                                    level="M"
+                                />
+                            </div>
+                            <p>고객이 QR 코드를 스캔하면 바로 접속합니다.</p>
                         </div>
                     )}
                 </div>

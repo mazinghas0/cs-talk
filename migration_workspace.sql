@@ -12,16 +12,8 @@ CREATE TABLE IF NOT EXISTS workspaces (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 워크스페이스 RLS 설정
+-- 워크스페이스 RLS 설정 (기본)
 ALTER TABLE workspaces ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Workspaces are viewable by members." ON workspaces
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM workspace_members 
-            WHERE workspace_id = workspaces.id AND user_id = auth.uid()
-        ) OR owner_id = auth.uid()
-    );
 
 CREATE POLICY "Users can create workspaces." ON workspaces
     FOR INSERT WITH CHECK (auth.uid() = owner_id);
@@ -44,6 +36,15 @@ CREATE POLICY "Members can view other members in the same workspace." ON workspa
             SELECT 1 FROM workspace_members AS me
             WHERE me.workspace_id = workspace_members.workspace_id AND me.user_id = auth.uid()
         )
+    );
+
+-- 2.5 워크스페이스 상호 참조 RLS 추가 (테이블이 모두 생성된 후)
+CREATE POLICY "Workspaces are viewable by members." ON workspaces
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM workspace_members 
+            WHERE workspace_id = workspaces.id AND user_id = auth.uid()
+        ) OR owner_id = auth.uid()
     );
 
 -- 3. 기존 테이블에 workspace_id 추가 및 연동

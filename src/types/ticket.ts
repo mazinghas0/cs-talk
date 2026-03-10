@@ -36,11 +36,12 @@ export interface WorkspaceMember {
 export interface Message {
     id: string;
     ticket_id: string;
-    user_id: string;
+    user_id: string | null;
     content: string;
     is_internal_note: boolean;
     is_resolution: boolean;
     image_url?: string;
+    customer_name?: string;
     created_at: string;
     thread_parent_id?: string;
     profiles?: {

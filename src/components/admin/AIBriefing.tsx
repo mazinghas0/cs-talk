@@ -1,32 +1,46 @@
 import React, { useState } from 'react';
 import './AIBriefing.css';
-import { Sparkles, RefreshCw, Calendar, ChevronRight, MessageSquareQuote } from 'lucide-react';
+import { Sparkles, RefreshCw, Calendar, MessageSquareQuote } from 'lucide-react';
 import { useTicketStore } from '../../store/ticketStore';
+import { supabase } from '../../lib/supabase';
 
 export const AIBriefing: React.FC = () => {
     const { tickets } = useTicketStore();
     const [isGenerating, setIsGenerating] = useState(false);
     const [briefing, setBriefing] = useState<string | null>(null);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     const generateBriefing = async () => {
         setIsGenerating(true);
-        // 실제 운영 환경에서는 Supabase Edge Function을 호출하여 AI 요약을 가져옵니다.
-        // 현재는 케빈 님을 위한 프리미엄 데모 브리핑을 생성합니다.
-        setTimeout(() => {
-            setBriefing(`
-### 🤖 오늘의 CS 브리핑 (Premium)
+        setErrorMsg(null);
 
-안녕하세요, 케빈 님! 오늘의 주요 상담 내용을 요약해 드립니다.
+        try {
+            const { data, error } = await supabase.functions.invoke('ai-briefing', {
+                body: { tickets },
+            });
 
-- **업무 처리량**: 총 ${tickets.length}건의 활성 티켓 중 ${tickets.filter(t => t.status === 'resolved').length}건이 완료되었습니다.
-- **주요 이슈**: 현재 '${tickets.find(t => t.priority === 'urgent')?.title || '긴급 장애'}' 건이 가장 시급한 대응을 요약하고 있습니다.
-- **고객 만족도**: 지난 24시간 동안 고객 응대 지연 시간이 평균 15분으로 양호하게 유지되고 있습니다.
-- **AI 인사이트**: 최근 '결제 오류' 관련 문의가 20% 증가했습니다. 시스템 점검이 필요할 수 있습니다.
+            if (error) throw error;
+            if (data?.briefing) {
+                setBriefing(data.briefing);
+            } else {
+                throw new Error('응답 없음');
+            }
+        } catch (err) {
+            // Edge Function 미배포 시 데모 브리핑으로 폴백
+            const activeCount = tickets.filter(t => t.status === 'in_progress').length;
+            const resolvedCount = tickets.filter(t => t.status === 'resolved').length;
+            const urgentTicket = tickets.find(t => t.priority === 'urgent');
 
-내일도 제나가 완벽하게 보필하겠습니다!
-            `);
+            setBriefing(
+                `현재 ${activeCount}건의 업무가 진행 중이며 ${resolvedCount}건이 완료되었습니다.` +
+                (urgentTicket ? ` 특히 "${urgentTicket.title}" 건이 긴급 상태로 즉시 확인이 필요합니다.` : '') +
+                ` 오늘은 미응답 티켓을 우선 처리하고, 완료 대기 중인 건들을 최종 확인해 주세요.` +
+                `\n\n(AI 브리핑을 사용하려면 Supabase Edge Function을 배포하세요.)`
+            );
+            setErrorMsg('Edge Function 미배포 상태입니다. 데모 브리핑을 표시합니다.');
+        } finally {
             setIsGenerating(false);
-        }, 2000);
+        }
     };
 
     return (
@@ -48,12 +62,12 @@ export const AIBriefing: React.FC = () => {
             <div className="briefing-content">
                 {briefing ? (
                     <div className="briefing-text animate-fade-in">
-                        {briefing.split('\n').map((line, i) => (
+                        {errorMsg && <p className="briefing-warning">{errorMsg}</p>}
+                        {briefing.split('\n').filter(l => l.trim()).map((line, i) => (
                             <p key={i}>{line}</p>
                         ))}
                         <div className="briefing-footer">
                             <span><Calendar size={12} /> {new Date().toLocaleDateString('ko-KR')}</span>
-                            <ChevronRight size={14} />
                         </div>
                     </div>
                 ) : (

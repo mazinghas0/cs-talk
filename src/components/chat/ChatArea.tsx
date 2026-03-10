@@ -6,6 +6,7 @@ import { Send, FilePlus, MessageSquareWarning, Edit2, Trash2, X, ChevronLeft, Sh
 import { ShareTicketModal } from './ShareTicketModal';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { supabase } from '../../lib/supabase';
 
 interface ChatAreaProps {
     onBack?: () => void;
@@ -20,6 +21,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
     const [newMessage, setNewMessage] = useState('');
     const [isInternal, setIsInternal] = useState(false);
     const [isSending, setIsSending] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [pendingImageUrl, setPendingImageUrl] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Edit Modal States
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -133,13 +137,35 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
         );
     }
 
+    const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setIsUploading(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}.${fileExt}`;
+            const { error: uploadError } = await supabase.storage
+                .from('attachments')
+                .upload(fileName, file);
+            if (uploadError) throw uploadError;
+            const { data } = supabase.storage.from('attachments').getPublicUrl(fileName);
+            setPendingImageUrl(data.publicUrl);
+        } catch (err) {
+            alert('이미지 업로드에 실패했습니다.');
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
     const handleSend = async () => {
-        if (!ticket || !user || !newMessage.trim()) return;
+        if (!ticket || !user || (!newMessage.trim() && !pendingImageUrl)) return;
 
         setIsSending(true);
         try {
-            await sendMessage(ticket.id, newMessage, user.id, isInternal);
+            await sendMessage(ticket.id, newMessage || ' ', user.id, isInternal, pendingImageUrl || undefined);
             setNewMessage('');
+            setPendingImageUrl(null);
         } catch (error) {
             console.error('Failed to send message:', error);
             alert('메시지 전송에 실패했습니다.');
@@ -154,6 +180,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
             handleSend();
         }
     };
+
+    const canSend = !isSending && !isUploading && (!!newMessage.trim() || !!pendingImageUrl);
 
     return (
         <div className={`chat-area ambient-${ticket.priority}`}>
@@ -216,7 +244,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                 {messages.map((msg) => {
                     const isMe = msg.user_id === user?.id;
                     const isInternalMsg = msg.is_internal_note;
-                    const senderName = msg.profiles?.full_name || msg.profiles?.email?.split('@')[0] || '익명';
+                    const senderName = msg.customer_name || msg.profiles?.full_name || msg.profiles?.email?.split('@')[0] || '익명';
 
                     if (isInternalMsg) {
                         return (
@@ -251,8 +279,30 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
             </div>
 
             {/* Input */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleImageSelect}
+            />
+            {pendingImageUrl && (
+                <div className="pending-image-preview">
+                    <img src={pendingImageUrl} alt="첨부 예정" />
+                    <button className="remove-image-btn" onClick={() => setPendingImageUrl(null)}>
+                        <X size={14} />
+                    </button>
+                </div>
+            )}
             <div className="chat-input-area">
-                <button className="icon-btn tool-btn"><FilePlus size={20} /></button>
+                <button
+                    className={`icon-btn tool-btn ${isUploading ? 'uploading' : ''}`}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    title="이미지 첨부"
+                >
+                    <FilePlus size={20} />
+                </button>
                 <div className="input-wrapper">
                     <textarea
                         value={newMessage}
@@ -260,10 +310,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                         onKeyDown={handleKeyDown}
                         placeholder={isInternal ? "내부 메모 작성..." : "메시지 입력 (Enter로 전송)"}
                         rows={1}
-                        disabled={isSending}
+                        disabled={isSending || isUploading}
                     />
                 </div>
-                <button className="icon-btn send-btn" onClick={handleSend} disabled={isSending || !newMessage.trim()}>
+                <button className="icon-btn send-btn" onClick={handleSend} disabled={!canSend}>
                     <Send size={20} />
                 </button>
             </div>
