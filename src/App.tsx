@@ -9,7 +9,7 @@ import { useAuthStore } from './store/authStore'
 import { useTicketStore } from './store/ticketStore'
 
 function AuthenticatedApp() {
-  const { session, isLoading, initialize, profile } = useAuthStore()
+  const { session, isLoading, initialize, profile, currentWorkspace } = useAuthStore()
   const { subscribeToChanges } = useTicketStore()
 
   useEffect(() => {
@@ -17,13 +17,13 @@ function AuthenticatedApp() {
   }, [initialize])
 
   useEffect(() => {
-    if (session) {
-      const unsubscribe = subscribeToChanges()
-      return () => {
-        if (unsubscribe) unsubscribe()
-      }
+    if (!session || !currentWorkspace) return
+    const unsubscribe = subscribeToChanges()
+    return () => {
+      if (unsubscribe) unsubscribe()
     }
-  }, [session, subscribeToChanges])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, currentWorkspace?.id])
 
   if (isLoading) {
     return <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-secondary)' }}>Loading...</div>

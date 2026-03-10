@@ -261,7 +261,11 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     },
 
     subscribeToChanges: () => {
-        if (get().isSubscribed) return () => {};
+        // 이전 구독이 있으면 먼저 해제 후 재구독 (워크스페이스 전환 시 올바른 채널로 재연결)
+        if (get().isSubscribed) {
+            // isSubscribed만 false로 — 채널은 아래서 새로 만듦
+            set({ isSubscribed: false });
+        }
 
         const { currentWorkspace } = useAuthStore.getState();
         if (!currentWorkspace) return () => {};
@@ -309,19 +313,31 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 }
 
                 if (newMessage.ticket_id === get().selectedTicketId) {
-                    // 현재 보고 있는 채팅방의 메시지 → profiles join 후 추가
-                    const { data, error } = await supabase
-                        .from('messages')
-                        .select(`*, profiles:user_id(full_name, email)`)
-                        .eq('id', newMessage.id)
-                        .single();
+                    // 현재 보고 있는 채팅방 메시지 → payload로 즉시 추가 후 profiles로 업데이트
+                    const baseMessage: Message = {
+                        ...newMessage,
+                        profiles: undefined,
+                    };
+                    set((state) => {
+                        if (state.messages.some(m => m.id === newMessage.id)) return state;
+                        return { messages: [...state.messages, baseMessage] };
+                    });
+                    get().markAsRead(newMessage.ticket_id);
 
-                    if (!error && data) {
-                        set((state) => {
-                            if (state.messages.some(m => m.id === (data as Message).id)) return state;
-                            return { messages: [...state.messages, data as Message] };
-                        });
-                        get().markAsRead(newMessage.ticket_id);
+                    // profiles 정보 비동기 업데이트 (실패해도 메시지는 이미 표시됨)
+                    if (newMessage.user_id) {
+                        const { data } = await supabase
+                            .from('messages')
+                            .select(`*, profiles:user_id(full_name, email)`)
+                            .eq('id', newMessage.id)
+                            .single();
+                        if (data) {
+                            set((state) => ({
+                                messages: state.messages.map(m =>
+                                    m.id === newMessage.id ? (data as Message) : m
+                                )
+                            }));
+                        }
                     }
                 } else {
                     // 다른 채팅방 메시지 → 안읽음 배지 증가
