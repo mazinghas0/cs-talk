@@ -62,11 +62,14 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
             <div className="modal-content profile-settings-modal" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <div className="header-title">
-                        <UserIcon size={20} />
-                        <h3>사용자 프로필 설정</h3>
+                        <div className="profile-icon-wrapper">
+                            <UserIcon size={24} />
+                        </div>
+                        <h3>내 프로필 수정</h3>
                     </div>
-                    <button className="close-btn" onClick={onClose}><X size={20} /></button>
+                    <button className="icon-btn-close" onClick={onClose}><X size={20} /></button>
                 </div>
+
 
                 <form onSubmit={handleSave} className="profile-form">
                     <div className="form-group">

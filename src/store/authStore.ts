@@ -32,6 +32,7 @@ interface AuthStore {
     updateUserRole: (targetId: string, newRole: 'user' | 'admin') => Promise<void>;
     fetchWorkspaces: () => Promise<void>;
     setCurrentWorkspace: (workspace: Workspace | null) => void;
+    createWorkspace: (name: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -167,4 +168,24 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         }
     },
     setCurrentWorkspace: (workspace) => set({ currentWorkspace: workspace }),
+    createWorkspace: async (name) => {
+        const user = get().user;
+        if (!user) return;
+
+        const { data, error } = await supabase
+            .from('workspaces')
+            .insert([{ name, owner_id: user.id }])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Create workspace error:', error);
+            throw error;
+        }
+
+        set((state) => ({
+            workspaces: [data as Workspace, ...state.workspaces],
+            currentWorkspace: data as Workspace
+        }));
+    },
 }));

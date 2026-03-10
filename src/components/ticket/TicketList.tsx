@@ -182,7 +182,11 @@ export const TicketList: React.FC = () => {
 
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user || !currentWorkspace || !newTitle.trim() || !newDesc.trim()) return;
+        if (!currentWorkspace) {
+            alert('새 워크스페이스를 먼저 추가하거나 선택해주세요.');
+            return;
+        }
+        if (!user || !newTitle.trim() || !newDesc.trim()) return;
 
         setIsSubmitting(true);
         try {
@@ -205,9 +209,23 @@ export const TicketList: React.FC = () => {
         }
     };
 
+    if (!currentWorkspace) {
+        return (
+            <div className="ticket-list-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', padding: '2rem' }}>
+                <div style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', padding: '3rem 2rem', borderRadius: '16px', maxWidth: '400px', backdropFilter: 'blur(10px)' }}>
+                    <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>CS_talk 시작하기</h3>
+                    <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '2rem' }}>
+                        좌측 스위처 메뉴의 <b>+</b> 버튼을 눌러 새 워크스페이스를 만들거나, 초대받은 그룹을 선택해주세요.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="ticket-list-container">
             <div className="ticket-list-header">
+
                 <h2 className="title">업무 요청</h2>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button

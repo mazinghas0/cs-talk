@@ -1,6 +1,6 @@
 import React from 'react';
 import './MainLayout.css';
-import { MessageSquare, Settings, UserCircle, Shield, Download } from 'lucide-react';
+import { MessageSquare, UserCircle, Shield, Download } from 'lucide-react';
 import { TicketList } from '../ticket/TicketList';
 import { ChatArea } from '../chat/ChatArea';
 import { ProfileSettings } from '../profile/ProfileSettings';
@@ -75,7 +75,6 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                                 onClick={() => setIsAdminOpen(true)}
                             />
                         )}
-                        <MessageSquare size={22} color="var(--accent-primary)" style={{ cursor: 'pointer' }} />
                         {installPrompt && (
                             <Download
                                 size={22}
@@ -87,9 +86,9 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                         )}
                     </div>
                     <div className="sidebar-bottom">
-                        <Settings size={22} color="var(--text-secondary)" style={{ cursor: 'pointer' }} onClick={() => setIsSettingsOpen(true)} />
                         <UserCircle size={30} color="var(--text-primary)" style={{ cursor: 'pointer' }} onClick={() => setIsSettingsOpen(true)} />
                     </div>
+
                 </nav>
             )}
 
@@ -130,13 +129,10 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                         </div>
                     )}
                     <div className="nav-item" onClick={() => setIsSettingsOpen(true)}>
-                        <Settings size={22} />
-                        <span>설정</span>
-                    </div>
-                    <div className="nav-item" onClick={() => setIsSettingsOpen(true)}>
                         <UserCircle size={22} />
                         <span>프로필</span>
                     </div>
+
                 </nav>
             )}
         </div>
