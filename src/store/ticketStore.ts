@@ -261,11 +261,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     },
 
     subscribeToChanges: () => {
-        // 이전 구독이 있으면 먼저 해제 후 재구독 (워크스페이스 전환 시 올바른 채널로 재연결)
-        if (get().isSubscribed) {
-            // isSubscribed만 false로 — 채널은 아래서 새로 만듦
-            set({ isSubscribed: false });
-        }
+        if (get().isSubscribed) return () => {};
 
         const { currentWorkspace } = useAuthStore.getState();
         if (!currentWorkspace) return () => {};
@@ -360,7 +356,21 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
             })
             .subscribe((status) => {
                 console.log('📡 [Realtime] Status:', status);
-                if (status === 'SUBSCRIBED') set({ isSubscribed: true });
+                if (status === 'SUBSCRIBED') {
+                    set({ isSubscribed: true });
+                    // 재연결 시 끊긴 동안 놓친 메시지 동기화 (모바일 네트워크 전환 대비)
+                    get().fetchTickets();
+                    const selectedId = get().selectedTicketId;
+                    if (selectedId) get().fetchMessages(selectedId);
+                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                    // 채널 오류 시 isSubscribed 초기화 → App.tsx 워크스페이스 변경 없이는
+                    // 자동 재구독이 안 되므로 채널을 직접 제거 후 재구독
+                    set({ isSubscribed: false });
+                    supabase.removeChannel(channel);
+                    setTimeout(() => {
+                        get().subscribeToChanges();
+                    }, 2000);
+                }
             });
 
         return () => {
