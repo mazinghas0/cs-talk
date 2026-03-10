@@ -22,6 +22,7 @@ export interface Workspace {
     name: string;
     owner_id: string;
     plan_type: 'free' | 'pro';
+    invite_code?: string;
     created_at: string;
     updated_at: string;
 }

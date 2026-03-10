@@ -1,10 +1,11 @@
 import React from 'react';
 import './MainLayout.css';
-import { MessageSquare, UserCircle, Shield, Download, Layers } from 'lucide-react';
+import { MessageSquare, UserCircle, Shield, Download, Layers, UserPlus } from 'lucide-react';
 import { TicketList } from '../ticket/TicketList';
 import { ChatArea } from '../chat/ChatArea';
 import { ProfileSettings } from '../profile/ProfileSettings';
 import { AdminPanel } from '../admin/AdminPanel';
+import { WorkspaceInviteModal } from '../workspace/WorkspaceInviteModal';
 import { useTicketStore } from '../../store/ticketStore';
 import { useAuthStore } from '../../store/authStore';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
@@ -13,6 +14,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
     const [isAdminOpen, setIsAdminOpen] = React.useState(false);
     const [isWorkspaceOpen, setIsWorkspaceOpen] = React.useState(false);
+    const [isInviteOpen, setIsInviteOpen] = React.useState(false);
     const [installPrompt, setInstallPrompt] = React.useState<Event | null>(null);
     const { selectedTicketId, setSelectedTicketId } = useTicketStore();
     const { isAdmin, workspaces, currentWorkspace, isLoading } = useAuthStore();
@@ -88,6 +90,13 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                                 onClick={() => setIsAdminOpen(true)}
                             />
                         )}
+                        <UserPlus
+                            size={22}
+                            color="var(--text-secondary)"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => setIsInviteOpen(true)}
+                            aria-label="팀원 초대"
+                        />
                         {installPrompt && (
                             <Download
                                 size={22}
@@ -111,6 +120,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
 
             <ProfileSettings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
             <AdminPanel isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} />
+            <WorkspaceInviteModal isOpen={isInviteOpen} onClose={() => setIsInviteOpen(false)} />
 
             {/* 모바일 워크스페이스 전환 시트 */}
             {isMobile && isWorkspaceOpen && (
@@ -155,6 +165,10 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                     <div className="nav-item" onClick={() => setIsWorkspaceOpen(true)}>
                         <Layers size={22} />
                         <span>{currentWorkspace?.name.substring(0, 4) || '공간'}</span>
+                    </div>
+                    <div className="nav-item" onClick={() => setIsInviteOpen(true)}>
+                        <UserPlus size={22} />
+                        <span>초대</span>
                     </div>
                     {installPrompt && (
                         <div className="nav-item" onClick={handleInstallClick}>

@@ -33,6 +33,8 @@ interface AuthStore {
     fetchWorkspaces: () => Promise<void>;
     setCurrentWorkspace: (workspace: Workspace | null) => void;
     createWorkspace: (name: string) => Promise<void>;
+    generateInviteCode: (workspaceId: string) => Promise<string>;
+    joinWorkspaceByCode: (code: string) => Promise<Workspace>;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -182,6 +184,59 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     },
 
     setCurrentWorkspace: (workspace) => set({ currentWorkspace: workspace }),
+
+    generateInviteCode: async (workspaceId) => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        const code = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+
+        const { error } = await supabase
+            .from('workspaces')
+            .update({ invite_code: code })
+            .eq('id', workspaceId);
+
+        if (error) throw error;
+
+        set((state) => ({
+            workspaces: state.workspaces.map(w => w.id === workspaceId ? { ...w, invite_code: code } : w),
+            currentWorkspace: state.currentWorkspace?.id === workspaceId
+                ? { ...state.currentWorkspace, invite_code: code }
+                : state.currentWorkspace,
+        }));
+
+        return code;
+    },
+
+    joinWorkspaceByCode: async (code) => {
+        const user = get().user;
+        if (!user) throw new Error('로그인이 필요합니다.');
+
+        const { data: ws, error: wsError } = await supabase
+            .from('workspaces')
+            .select('*')
+            .eq('invite_code', code.toUpperCase())
+            .single();
+
+        if (wsError || !ws) throw new Error('유효하지 않은 초대 코드입니다.');
+
+        const alreadyMember = get().workspaces.some(w => w.id === ws.id);
+        if (alreadyMember) {
+            set({ currentWorkspace: ws as Workspace });
+            return ws as Workspace;
+        }
+
+        const { error: joinError } = await supabase
+            .from('workspace_members')
+            .insert([{ workspace_id: ws.id, user_id: user.id, role: 'member' }]);
+
+        if (joinError) throw joinError;
+
+        set((state) => ({
+            workspaces: [ws as Workspace, ...state.workspaces],
+            currentWorkspace: ws as Workspace,
+        }));
+
+        return ws as Workspace;
+    },
 
     createWorkspace: async (name) => {
         const user = get().user;

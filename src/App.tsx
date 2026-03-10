@@ -4,6 +4,7 @@ import { MainLayout } from './components/layout/MainLayout'
 import { AuthView } from './components/auth/AuthView'
 import { OnboardingView } from './components/onboarding/OnboardingView'
 import { CustomerTicketView } from './components/customer/CustomerTicketView'
+import { JoinWorkspaceView } from './components/workspace/JoinWorkspaceView'
 import { useAuthStore } from './store/authStore'
 import { useTicketStore } from './store/ticketStore'
 
@@ -48,6 +49,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/ticket/:ticketId" element={<CustomerTicketView />} />
+        <Route path="/join/:code" element={<JoinWorkspaceView />} />
         <Route path="/*" element={<AuthenticatedApp />} />
       </Routes>
     </BrowserRouter>
