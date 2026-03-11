@@ -234,6 +234,30 @@
     overflow: hidden;
 }
 
+@media (max-width: 1024px) {
+    .ticket-title {
+        font-size: 1.05rem;
+    }
+
+    .ticket-desc {
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .time {
+        font-size: 0.8rem;
+    }
+
+    .priority-badge {
+        font-size: 0.75rem;
+        padding: 3px 7px;
+    }
+
+    .ticket-item {
+        padding: 1.1rem 1rem;
+    }
+}
+
 .pull-indicator {
     display: flex;
     align-items: center;

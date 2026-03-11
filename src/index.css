@@ -43,6 +43,12 @@
   }
 }
 
+@media (max-width: 1024px) {
+  html {
+    font-size: 17px;
+  }
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

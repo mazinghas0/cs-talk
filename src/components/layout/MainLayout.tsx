@@ -45,6 +45,28 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
         };
     }, []);
 
+    // Android 시스템 뒤로가기: 채팅 열려있으면 목록으로, 아니면 기본 동작
+    React.useEffect(() => {
+        if (!isMobile) return;
+
+        if (selectedTicketId) {
+            // 채팅이 열릴 때 더미 히스토리 항목 추가 (뒤로가기 intercept용)
+            window.history.pushState({ chatOpen: true }, '');
+        }
+
+        const handlePopState = (_e: PopStateEvent) => {
+            if (selectedTicketId) {
+                // 뒤로가기 → 채팅 닫기
+                setSelectedTicketId(null);
+                // 히스토리 다시 추가해서 다음 뒤로가기도 intercept
+            }
+            // selectedTicketId가 없으면 기본 동작 (앱 이탈)
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [isMobile, selectedTicketId, setSelectedTicketId]);
+
     const handleInstallClick = async () => {
         if (!installPrompt) return;
         const prompt = installPrompt as BeforeInstallPromptEvent;
