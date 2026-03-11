@@ -312,6 +312,8 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                     // 현재 보고 있는 채팅방 메시지 → payload로 즉시 추가 후 profiles로 업데이트
                     const baseMessage: Message = {
                         ...newMessage,
+                        image_url: newMessage.image_url ?? undefined,
+                        thread_parent_id: newMessage.thread_parent_id ?? undefined,
                         profiles: undefined,
                     };
                     set((state) => {
