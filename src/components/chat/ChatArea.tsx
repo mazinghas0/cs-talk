@@ -35,6 +35,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatMessagesRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [hasNewMessage, setHasNewMessage] = useState(false);
     const wasAtBottomRef = useRef(true);
 
@@ -170,6 +171,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
             await sendMessage(ticket.id, newMessage || ' ', user.id, isInternal, pendingImageUrl || undefined);
             setNewMessage('');
             setPendingImageUrl(null);
+            textareaRef.current?.focus();
         } catch (error) {
             console.error('Failed to send message:', error);
             alert('메시지 전송에 실패했습니다.');
@@ -309,6 +311,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                 </button>
                 <div className="input-wrapper">
                     <textarea
+                        ref={textareaRef}
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyDown={handleKeyDown}
