@@ -36,6 +36,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatMessagesRef = useRef<HTMLDivElement>(null);
     const [hasNewMessage, setHasNewMessage] = useState(false);
+    const wasAtBottomRef = useRef(true);
 
     const isAtBottom = useCallback(() => {
         const el = chatMessagesRef.current;
@@ -50,17 +51,19 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
     // 채팅방 전환 시 즉시 맨 아래로 이동
     useEffect(() => {
         setHasNewMessage(false);
-        // 렌더링 후 실행되도록 setTimeout 0 사용
+        wasAtBottomRef.current = true;
         const timer = setTimeout(() => scrollToBottom(true), 0);
         return () => clearTimeout(timer);
     }, [selectedTicketId, scrollToBottom]);
 
     // 새 메시지 도착 시 스마트 스크롤
+    // DOM 렌더링 전 wasAtBottomRef로 판단 — isAtBottom()은 렌더 후 scrollHeight가 이미 커져서 오판함
     useEffect(() => {
         if (messages.length === 0) return;
-        if (isAtBottom()) {
-            scrollToBottom();
+        if (wasAtBottomRef.current) {
+            const timer = setTimeout(() => scrollToBottom(), 0);
             setHasNewMessage(false);
+            return () => clearTimeout(timer);
         } else {
             setHasNewMessage(true);
         }
@@ -72,7 +75,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
     };
 
     const handleScroll = () => {
-        if (isAtBottom()) {
+        wasAtBottomRef.current = isAtBottom();
+        if (wasAtBottomRef.current) {
             setHasNewMessage(false);
         }
     };
