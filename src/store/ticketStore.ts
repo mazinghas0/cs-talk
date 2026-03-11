@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { RealtimeChannel } from '@supabase/supabase-js';
 import { Ticket, TicketStatus, TicketPriority, Message } from '../types/ticket';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from './authStore';
@@ -24,6 +25,7 @@ interface TicketStore {
     isLoadingData: boolean;
     isSubscribed: boolean;
     unreadCounts: Record<string, number>;
+    realtimeChannel: RealtimeChannel | null;
 
     fetchTickets: () => Promise<void>;
     fetchUnreadCounts: () => Promise<void>;
@@ -49,6 +51,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     isLoadingData: false,
     isSubscribed: false,
     unreadCounts: {},
+    realtimeChannel: null,
 
     fetchTickets: async () => {
         const { currentWorkspace } = useAuthStore.getState();
@@ -227,6 +230,15 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 if (state.messages.find(m => m.id === (data as Message).id)) return state;
                 return { messages: [...state.messages, data as Message] };
             });
+            // Broadcast로 다른 클라이언트에 즉시 전달 (RLS JOIN 한계 우회)
+            const { realtimeChannel } = get();
+            if (realtimeChannel) {
+                realtimeChannel.send({
+                    type: 'broadcast',
+                    event: 'new-message',
+                    payload: data as Message,
+                });
+            }
         }
     },
 
@@ -347,6 +359,24 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                     }));
                 }
             })
+            .on('broadcast', { event: 'new-message' }, ({ payload }) => {
+                // RLS JOIN 한계를 우회하는 Broadcast 수신 — postgres_changes가 전달 못한 메시지를 여기서 처리
+                const newMessage = payload as Message;
+                if (newMessage.ticket_id === get().selectedTicketId) {
+                    set((state) => {
+                        if (state.messages.some(m => m.id === newMessage.id)) return state;
+                        return { messages: [...state.messages, newMessage] };
+                    });
+                    get().markAsRead(newMessage.ticket_id);
+                } else {
+                    set((state) => ({
+                        unreadCounts: {
+                            ...state.unreadCounts,
+                            [newMessage.ticket_id]: (state.unreadCounts[newMessage.ticket_id] || 0) + 1
+                        }
+                    }));
+                }
+            })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles_tickets_reads' }, async (payload) => {
                 const newRead = payload.new as { profile_id: string; ticket_id: string; last_read_at: string } | undefined;
                 const { data: { user } } = await supabase.auth.getUser();
@@ -359,7 +389,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
             .subscribe((status) => {
                 console.log('📡 [Realtime] Status:', status);
                 if (status === 'SUBSCRIBED') {
-                    set({ isSubscribed: true });
+                    set({ isSubscribed: true, realtimeChannel: channel });
                     // 재연결 시 끊긴 동안 놓친 메시지 동기화 (모바일 네트워크 전환 대비)
                     get().fetchTickets();
                     const selectedId = get().selectedTicketId;
@@ -378,7 +408,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         return () => {
             console.log('🔕 [Realtime] Unsubscribing...');
             supabase.removeChannel(channel);
-            set({ isSubscribed: false });
+            set({ isSubscribed: false, realtimeChannel: null });
         };
     }
 }));
