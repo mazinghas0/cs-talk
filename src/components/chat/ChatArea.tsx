@@ -171,6 +171,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
             await sendMessage(ticket.id, newMessage || ' ', user.id, isInternal, pendingImageUrl || undefined);
             setNewMessage('');
             setPendingImageUrl(null);
+            if (textareaRef.current) textareaRef.current.style.height = 'auto';
         } catch (error) {
             console.error('Failed to send message:', error);
             alert('메시지 전송에 실패했습니다.');
@@ -185,6 +186,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
             e.preventDefault();
             handleSend();
         }
+    };
+
+    const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setNewMessage(e.target.value);
+        // 높이 자동 조절: 내용에 맞게 늘어났다가 비우면 원래 크기로 복귀
+        e.target.style.height = 'auto';
+        e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
     };
 
     const canSend = !isSending && !isUploading && (!!newMessage.trim() || !!pendingImageUrl);
@@ -313,7 +321,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                     <textarea
                         ref={textareaRef}
                         value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
+                        onChange={handleTextareaChange}
                         onKeyDown={handleKeyDown}
                         placeholder={isInternal ? "내부 메모 작성..." : "메시지 입력 (Enter로 전송)"}
                         rows={1}

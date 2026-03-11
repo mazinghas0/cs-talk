@@ -164,11 +164,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
     transition: all 0.2s;
-    margin-right: 4px;
+    margin-right: 2px;
 }
 
 .icon-btn-header:hover {

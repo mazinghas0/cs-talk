@@ -78,7 +78,7 @@ export const AuthView: React.FC = () => {
                     </div>
                 )}
 
-                <form className="auth-form" onSubmit={handleSubmit}>
+                <form className="auth-form" onSubmit={handleSubmit} autoComplete="on">
                     {!isLogin && (
                         <div className="input-group">
                             <label>이름</label>
@@ -89,6 +89,7 @@ export const AuthView: React.FC = () => {
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     required={!isLogin}
+                                    autoComplete="name"
                                 />
                             </div>
                         </div>
@@ -104,6 +105,7 @@ export const AuthView: React.FC = () => {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
+                                autoComplete={isLogin ? 'username' : 'email'}
                             />
                         </div>
                     </div>
@@ -119,6 +121,7 @@ export const AuthView: React.FC = () => {
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                                 minLength={6}
+                                autoComplete={isLogin ? 'current-password' : 'new-password'}
                             />
                         </div>
                     </div>
