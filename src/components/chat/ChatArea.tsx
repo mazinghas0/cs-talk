@@ -171,12 +171,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
             await sendMessage(ticket.id, newMessage || ' ', user.id, isInternal, pendingImageUrl || undefined);
             setNewMessage('');
             setPendingImageUrl(null);
-            textareaRef.current?.focus();
         } catch (error) {
             console.error('Failed to send message:', error);
             alert('메시지 전송에 실패했습니다.');
         } finally {
             setIsSending(false);
+            setTimeout(() => textareaRef.current?.focus(), 0);
         }
     };
 
