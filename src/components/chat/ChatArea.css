@@ -179,6 +179,48 @@
 .chat-header-actions {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
+    gap: 2px;
+}
+
+/* 모바일: 헤더 공간 최적화 */
+@media (max-width: 768px) {
+    .chat-header {
+        padding: 0 0.75rem;
+    }
+
+    .chat-header-info {
+        min-width: 0;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    .chat-header-info h2 {
+        font-size: 0.92rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 140px;
+    }
+
+    .btn-resolve,
+    .btn-request-resolve {
+        font-size: 0.75rem;
+        padding: 6px 8px;
+        white-space: nowrap;
+        max-width: 110px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .resolve-requested-badge {
+        font-size: 0.68rem;
+        padding: 3px 6px;
+        max-width: 100px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 }
 
 /* Messages */
@@ -333,6 +375,9 @@
     gap: 0.5rem;
     align-items: center;
     background: transparent;
+    /* iOS 키보드 오버랩 방지: 키보드가 올라오면 입력창도 함께 올라옴 */
+    padding-bottom: calc(0.5rem + var(--keyboard-height, 0px));
+    transition: padding-bottom 0.15s ease;
 }
 
 .input-wrapper {

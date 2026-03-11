@@ -49,6 +49,25 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
         messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' });
     }, []);
 
+    // iOS Safari 키보드 대응: visualViewport 크기 변화로 키보드 높이 감지
+    useEffect(() => {
+        const vv = window.visualViewport;
+        if (!vv) return;
+
+        const handleResize = () => {
+            const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+            document.documentElement.style.setProperty('--keyboard-height', `${keyboardHeight}px`);
+        };
+
+        vv.addEventListener('resize', handleResize);
+        vv.addEventListener('scroll', handleResize);
+        return () => {
+            vv.removeEventListener('resize', handleResize);
+            vv.removeEventListener('scroll', handleResize);
+            document.documentElement.style.setProperty('--keyboard-height', '0px');
+        };
+    }, []);
+
     // 채팅방 전환 시 즉시 맨 아래로 이동
     useEffect(() => {
         setHasNewMessage(false);
