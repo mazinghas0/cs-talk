@@ -62,13 +62,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             set({ isLoading: false });
 
             supabase.auth.onAuthStateChange(async (_event, session) => {
-                set({ session, user: session?.user || null });
+                set({ session, user: session?.user || null, isLoading: true });
                 if (session?.user) {
                     await get().fetchProfile(session.user.id);
                     await get().fetchWorkspaces();
                 } else {
                     set({ profile: null, isAdmin: false, workspaces: [], currentWorkspace: null });
                 }
+                set({ isLoading: false });
             });
         } catch (error) {
             console.error('Auth initialization error:', error);
@@ -96,6 +97,27 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 profile: data as Profile,
                 isAdmin: data.role === 'admin',
             });
+            return;
+        }
+
+        // 신규 유저: DB 트리거가 아직 profiles 행을 생성하지 않은 경우 직접 생성
+        if (error?.code === 'PGRST116') {
+            const user = get().user;
+            const { data: upserted } = await supabase
+                .from('profiles')
+                .upsert({
+                    id,
+                    email: user?.email ?? '',
+                    full_name: null,
+                    avatar_url: null,
+                    role: 'user',
+                }, { onConflict: 'id' })
+                .select()
+                .single();
+
+            if (upserted) {
+                set({ profile: upserted as Profile, isAdmin: false });
+            }
         }
     },
 
