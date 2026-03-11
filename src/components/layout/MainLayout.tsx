@@ -24,11 +24,11 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     const { isAdmin, workspaces, currentWorkspace, isLoading, joinWorkspaceByCode } = useAuthStore();
 
     const [isMobile, setIsMobile] = React.useState(
-        () => window.matchMedia('(max-width: 768px)').matches
+        () => window.matchMedia('(max-width: 1024px)').matches
     );
 
     React.useEffect(() => {
-        const mq = window.matchMedia('(max-width: 768px)');
+        const mq = window.matchMedia('(max-width: 1024px)');
         const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
         mq.addEventListener('change', handler);
 

@@ -4,7 +4,7 @@ import { useTicketStore } from '../../store/ticketStore';
 import { useAuthStore } from '../../store/authStore';
 import { Send, FilePlus, MessageSquareWarning, Edit2, Trash2, X, ChevronLeft, Share2 } from 'lucide-react';
 import { ShareTicketModal } from './ShareTicketModal';
-import { format } from 'date-fns';
+import { format, isSameDay, isSameMinute } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { supabase } from '../../lib/supabase';
 
@@ -155,8 +155,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
     if (!ticket) {
         return (
             <div className="chat-empty">
-                <MessageSquareWarning size={48} color="var(--glass-border)" />
-                <p>왼쪽에서 처리할 요청(티켓)을 선택하세요.</p>
+                <div className="chat-empty-icon">
+                    <MessageSquareWarning size={32} color="var(--accent-primary)" />
+                </div>
+                <p className="chat-empty-title">요청을 선택하세요</p>
+                <p className="chat-empty-desc">왼쪽 목록에서 처리할 업무 요청을 선택하면<br />대화 내용이 여기에 표시됩니다.</p>
             </div>
         );
     }
@@ -274,38 +277,77 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                     </div>
                 </div>
 
-                {messages.map((msg) => {
+                {messages.map((msg, idx) => {
                     const isMe = msg.user_id === user?.id;
                     const isInternalMsg = msg.is_internal_note;
                     const senderName = msg.customer_name || msg.profiles?.full_name || msg.profiles?.email?.split('@')[0] || '익명';
 
+                    const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                    const nextMsg = idx < messages.length - 1 ? messages[idx + 1] : null;
+
+                    const msgDate = new Date(msg.created_at);
+                    const prevDate = prevMsg ? new Date(prevMsg.created_at) : null;
+
+                    // 날짜 구분선: 이전 메시지와 날짜가 다를 때
+                    const showDateDivider = !prevDate || !isSameDay(msgDate, prevDate);
+
+                    // 연속 그룹핑: 같은 발신자 + 1분 이내 + 둘 다 일반 메시지
+                    const isContinued = !isInternalMsg &&
+                        prevMsg !== null &&
+                        !prevMsg.is_internal_note &&
+                        prevMsg.user_id === msg.user_id &&
+                        !showDateDivider &&
+                        isSameMinute(msgDate, new Date(prevMsg.created_at));
+
+                    // 마지막 메시지 여부: 다음이 없거나 다음 메시지가 다른 발신자거나 다른 분
+                    const isLastInGroup = !nextMsg ||
+                        nextMsg.is_internal_note ||
+                        nextMsg.user_id !== msg.user_id ||
+                        !isSameMinute(new Date(nextMsg.created_at), msgDate);
+
                     if (isInternalMsg) {
                         return (
-                            <div key={msg.id} className="message-wrapper internal">
-                                <div className="message-bubble internal-bubble">
-                                    <p className="msg-text">{msg.content}</p>
-                                    {msg.image_url && (
-                                        <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />
-                                    )}
-                                    <span className="msg-time">{senderName} · {format(new Date(msg.created_at), 'a h:mm', { locale: ko })}</span>
+                            <React.Fragment key={msg.id}>
+                                {showDateDivider && (
+                                    <div className="date-divider">
+                                        <span>{format(msgDate, 'yyyy년 M월 d일 (EEE)', { locale: ko })}</span>
+                                    </div>
+                                )}
+                                <div className="message-wrapper internal">
+                                    <div className="message-bubble internal-bubble">
+                                        <p className="msg-text">{msg.content}</p>
+                                        {msg.image_url && (
+                                            <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />
+                                        )}
+                                        <span className="msg-time">{senderName} · {format(msgDate, 'a h:mm', { locale: ko })}</span>
+                                    </div>
                                 </div>
-                            </div>
+                            </React.Fragment>
                         );
                     }
 
                     return (
-                        <div key={msg.id} className={`message-wrapper ${isMe ? 'admin-res' : 'user-req'}`}>
-                            <div className={`message-bubble ${isMe ? 'res-bubble' : 'req-bubble'}`}>
-                                <p className="msg-text">{msg.content}</p>
-                                {msg.image_url && (
-                                    <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />
-                                )}
-                                <span className="msg-time">
-                                    {!isMe && (senderName + ' · ')}
-                                    {format(new Date(msg.created_at), 'a h:mm', { locale: ko })}
-                                </span>
+                        <React.Fragment key={msg.id}>
+                            {showDateDivider && (
+                                <div className="date-divider">
+                                    <span>{format(msgDate, 'yyyy년 M월 d일 (EEE)', { locale: ko })}</span>
+                                </div>
+                            )}
+                            <div className={`message-wrapper ${isMe ? 'admin-res' : 'user-req'} ${isContinued ? 'continued' : ''}`}>
+                                <div className={`message-bubble ${isMe ? 'res-bubble' : 'req-bubble'} ${isContinued ? 'bubble-continued' : ''}`}>
+                                    <p className="msg-text">{msg.content}</p>
+                                    {msg.image_url && (
+                                        <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />
+                                    )}
+                                    {isLastInGroup && (
+                                        <span className="msg-time">
+                                            {!isMe && (senderName + ' · ')}
+                                            {format(msgDate, 'a h:mm', { locale: ko })}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        </React.Fragment>
                     );
                 })}
                 <div ref={messagesEndRef} />
@@ -336,7 +378,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                 >
                     <FilePlus size={20} />
                 </button>
-                <div className="input-wrapper">
+                <div className={`input-wrapper${isInternal ? ' internal-input' : ''}`}>
                     <textarea
                         ref={textareaRef}
                         value={newMessage}
@@ -352,14 +394,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                 </button>
             </div>
 
-            <div className="chat-input-footer">
-                <label className="toggle-internal">
+            <div className={`chat-input-footer${isInternal ? ' internal-mode' : ''}`}>
+                <label className={`toggle-internal${isInternal ? ' active' : ''}`}>
                     <input
                         type="checkbox"
                         checked={isInternal}
                         onChange={(e) => setIsInternal(e.target.checked)}
                     />
-                    <span>고객에게 보이지 않는 내부 메모로 전송</span>
+                    <span className="toggle-internal-dot" />
+                    <span>내부 메모 {isInternal ? '(팀원만 볼 수 있음)' : '로 전송'}</span>
                 </label>
             </div>
 
