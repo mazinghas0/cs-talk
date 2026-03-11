@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './MainLayout.css';
-import { MessageSquare, UserCircle, Shield, Download, Layers, UserPlus } from 'lucide-react';
+import { MessageSquare, UserCircle, Shield, Download, Layers, UserPlus, Loader2 } from 'lucide-react';
 import { TicketList } from '../ticket/TicketList';
 import { ChatArea } from '../chat/ChatArea';
 import { ProfileSettings } from '../profile/ProfileSettings';
@@ -16,8 +16,12 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     const [isWorkspaceOpen, setIsWorkspaceOpen] = React.useState(false);
     const [isInviteOpen, setIsInviteOpen] = React.useState(false);
     const [installPrompt, setInstallPrompt] = React.useState<Event | null>(null);
-    const { selectedTicketId, setSelectedTicketId } = useTicketStore();
-    const { isAdmin, workspaces, currentWorkspace, isLoading } = useAuthStore();
+    const [joinMode, setJoinMode] = useState<'select' | 'create' | 'code'>('select');
+    const [joinCode, setJoinCode] = useState('');
+    const [joinError, setJoinError] = useState('');
+    const [isJoining, setIsJoining] = useState(false);
+    const { selectedTicketId, setSelectedTicketId, fetchTickets } = useTicketStore();
+    const { isAdmin, workspaces, currentWorkspace, isLoading, joinWorkspaceByCode } = useAuthStore();
 
     const [isMobile, setIsMobile] = React.useState(
         () => window.matchMedia('(max-width: 768px)').matches
@@ -56,15 +60,76 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
 
     const handleBack = () => setSelectedTicketId(null);
 
+    const handleJoinByCode = async () => {
+        if (!joinCode.trim()) return;
+        setIsJoining(true);
+        setJoinError('');
+        try {
+            await joinWorkspaceByCode(joinCode.trim());
+            await fetchTickets();
+        } catch (err) {
+            setJoinError(err instanceof Error ? err.message : '참여에 실패했습니다. 코드를 확인해주세요.');
+        } finally {
+            setIsJoining(false);
+        }
+    };
+
     // 워크스페이스가 없을 때 안내 화면
     if (!isLoading && workspaces.length === 0) {
         return (
             <div className="layout-container empty-workspace-screen">
                 <div className="empty-workspace-content">
-                    <div className="empty-workspace-icon">🗂️</div>
+                    <div className="empty-workspace-icon">CS</div>
                     <p className="empty-workspace-title">아직 팀 공간이 없어요</p>
-                    <p className="empty-workspace-desc">아래에서 첫 번째 워크스페이스를 만들어보세요.</p>
-                    <WorkspaceSwitcher showCreateOnly />
+
+                    {joinMode === 'select' && (
+                        <>
+                            <p className="empty-workspace-desc">새 팀을 만들거나, 초대 코드로 기존 팀에 참여하세요.</p>
+                            <div className="empty-workspace-actions">
+                                <button className="btn-workspace-option btn-create" onClick={() => setJoinMode('create')}>
+                                    새 팀 만들기
+                                </button>
+                                <button className="btn-workspace-option btn-join" onClick={() => setJoinMode('code')}>
+                                    초대 코드로 참여
+                                </button>
+                            </div>
+                        </>
+                    )}
+
+                    {joinMode === 'create' && (
+                        <>
+                            <p className="empty-workspace-desc">아래에서 첫 번째 워크스페이스를 만들어보세요.</p>
+                            <WorkspaceSwitcher showCreateOnly />
+                            <button className="btn-back-select" onClick={() => setJoinMode('select')}>← 뒤로</button>
+                        </>
+                    )}
+
+                    {joinMode === 'code' && (
+                        <>
+                            <p className="empty-workspace-desc">팀에서 받은 초대 코드를 입력하세요.</p>
+                            <div className="join-code-form">
+                                <input
+                                    type="text"
+                                    className="join-code-input"
+                                    placeholder="초대 코드 입력 (예: ABC123)"
+                                    value={joinCode}
+                                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                                    maxLength={10}
+                                    autoFocus
+                                    onKeyDown={(e) => e.key === 'Enter' && handleJoinByCode()}
+                                />
+                                {joinError && <p className="join-code-error">{joinError}</p>}
+                                <button
+                                    className="btn-workspace-option btn-create"
+                                    onClick={handleJoinByCode}
+                                    disabled={isJoining || !joinCode.trim()}
+                                >
+                                    {isJoining ? <Loader2 size={16} className="spin" /> : '참여하기'}
+                                </button>
+                            </div>
+                            <button className="btn-back-select" onClick={() => { setJoinMode('select'); setJoinError(''); setJoinCode(''); }}>← 뒤로</button>
+                        </>
+                    )}
                 </div>
             </div>
         );

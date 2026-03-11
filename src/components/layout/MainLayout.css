@@ -48,6 +48,115 @@
     margin: 0 0 0.5rem;
 }
 
+.empty-workspace-icon {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.25rem;
+}
+
+.empty-workspace-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: 100%;
+    margin-top: 0.25rem;
+}
+
+.btn-workspace-option {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.btn-workspace-option:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-create {
+    background: var(--accent-primary);
+    color: #fff;
+}
+
+.btn-create:hover:not(:disabled) {
+    opacity: 0.88;
+}
+
+.btn-join {
+    background: var(--glass-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--glass-border);
+}
+
+.btn-join:hover {
+    background: var(--glass-border);
+}
+
+.join-code-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: 100%;
+}
+
+.join-code-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+    text-align: center;
+    text-transform: uppercase;
+    box-sizing: border-box;
+}
+
+.join-code-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.join-code-error {
+    font-size: 0.82rem;
+    color: var(--error, #ef4444);
+    margin: 0;
+    text-align: center;
+}
+
+.btn-back-select {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0.25rem 0;
+    margin-top: 0.25rem;
+}
+
+.btn-back-select:hover {
+    color: var(--text-primary);
+}
+
 /* ===================================
    SIDEBAR (Desktop only)
    =================================== */
