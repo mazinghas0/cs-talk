@@ -155,6 +155,46 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
         }
     };
 
+    // 메시지 컨텍스트 메뉴 — if (!ticket) return 이전에 선언 (Rules of Hooks 준수)
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msg: Message } | null>(null);
+    const [copyToast, setCopyToast] = useState(false);
+
+    const handleMenuOpen = useCallback((pos: { x: number; y: number }, msg: Message) => {
+        setContextMenu({ x: pos.x, y: pos.y, msg });
+    }, []);
+
+    const handleMenuClose = useCallback(() => {
+        setContextMenu(null);
+    }, []);
+
+    const showCopyToast = useCallback(() => {
+        setCopyToast(true);
+        setTimeout(() => setCopyToast(false), 2000);
+    }, []);
+
+    const handleCopy = useCallback(async () => {
+        if (!contextMenu) return;
+        try {
+            await navigator.clipboard.writeText(contextMenu.msg.content);
+            showCopyToast();
+        } catch { /* 미지원 환경 무시 */ }
+        setContextMenu(null);
+    }, [contextMenu, showCopyToast]);
+
+    const handleShare = useCallback(async () => {
+        if (!contextMenu) return;
+        const text = contextMenu.msg.content;
+        try {
+            if (navigator.share) {
+                await navigator.share({ text });
+            } else {
+                await navigator.clipboard.writeText(text);
+                showCopyToast();
+            }
+        } catch { /* 사용자 취소 또는 미지원 무시 */ }
+        setContextMenu(null);
+    }, [contextMenu, showCopyToast]);
+
     if (!ticket) {
         return (
             <div className="chat-empty">
@@ -221,46 +261,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
     };
 
     const canSend = !isSending && !isUploading && (!!newMessage.trim() || !!pendingImageUrl);
-
-    // 메시지 컨텍스트 메뉴
-    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msg: Message } | null>(null);
-    const [copyToast, setCopyToast] = useState(false);
-
-    const handleMenuOpen = useCallback((pos: { x: number; y: number }, msg: Message) => {
-        setContextMenu({ x: pos.x, y: pos.y, msg });
-    }, []);
-
-    const handleMenuClose = useCallback(() => {
-        setContextMenu(null);
-    }, []);
-
-    const showCopyToast = useCallback(() => {
-        setCopyToast(true);
-        setTimeout(() => setCopyToast(false), 2000);
-    }, []);
-
-    const handleCopy = useCallback(async () => {
-        if (!contextMenu) return;
-        try {
-            await navigator.clipboard.writeText(contextMenu.msg.content);
-            showCopyToast();
-        } catch { /* 미지원 환경 무시 */ }
-        setContextMenu(null);
-    }, [contextMenu, showCopyToast]);
-
-    const handleShare = useCallback(async () => {
-        if (!contextMenu) return;
-        const text = contextMenu.msg.content;
-        try {
-            if (navigator.share) {
-                await navigator.share({ text });
-            } else {
-                await navigator.clipboard.writeText(text);
-                showCopyToast();
-            }
-        } catch { /* 사용자 취소 또는 미지원 무시 */ }
-        setContextMenu(null);
-    }, [contextMenu, showCopyToast]);
 
     return (
         <div className={`chat-area ambient-${ticket.priority}`}>
