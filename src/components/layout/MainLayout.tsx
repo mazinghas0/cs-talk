@@ -1,11 +1,12 @@
 import React, { useState, useRef, useCallback } from 'react';
 import './MainLayout.css';
-import { MessageSquare, UserCircle, Shield, Download, Layers, UserPlus, Loader2, ChevronLeft, ChevronRight, Sun, Moon } from 'lucide-react';
+import { MessageSquare, UserCircle, Shield, Download, Layers, UserPlus, Loader2, ChevronLeft, ChevronRight, Sun, Moon, HelpCircle } from 'lucide-react';
 import { TicketList } from '../ticket/TicketList';
 import { ChatArea } from '../chat/ChatArea';
 import { ProfileSettings } from '../profile/ProfileSettings';
 import { AdminPanel } from '../admin/AdminPanel';
 import { WorkspaceInviteModal } from '../workspace/WorkspaceInviteModal';
+import { ShortcutsModal } from './ShortcutsModal';
 import { useTicketStore } from '../../store/ticketStore';
 import { useAuthStore } from '../../store/authStore';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
@@ -15,6 +16,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     const [isAdminOpen, setIsAdminOpen] = React.useState(false);
     const [isWorkspaceOpen, setIsWorkspaceOpen] = React.useState(false);
     const [isInviteOpen, setIsInviteOpen] = React.useState(false);
+    const [isShortcutsOpen, setIsShortcutsOpen] = React.useState(false);
     const [installPrompt, setInstallPrompt] = React.useState<Event | null>(null);
     const [joinMode, setJoinMode] = useState<'select' | 'create' | 'code'>('select');
     const [joinCode, setJoinCode] = useState('');
@@ -123,9 +125,18 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
         };
         window.addEventListener('beforeinstallprompt', handleInstallPrompt);
 
+        const handleShortcutKey = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.key === '/') {
+                e.preventDefault();
+                setIsShortcutsOpen(v => !v);
+            }
+        };
+        window.addEventListener('keydown', handleShortcutKey);
+
         return () => {
             mq.removeEventListener('change', handler);
             window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
+            window.removeEventListener('keydown', handleShortcutKey);
         };
     }, []);
 
@@ -270,6 +281,10 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                         )}
                     </div>
                     <div className="sidebar-bottom">
+                        <div className={`sidebar-btn${isShortcutsOpen ? ' active' : ''}`} onClick={() => setIsShortcutsOpen(v => !v)}>
+                            <HelpCircle size={20} color="var(--text-secondary)" />
+                            <span className="sidebar-tooltip">단축키 안내 (Ctrl+/)</span>
+                        </div>
                         <div className="sidebar-btn" onClick={() => setIsDarkMode(v => !v)}>
                             {isDarkMode ? <Sun size={20} color="var(--accent-warning)" /> : <Moon size={20} color="var(--accent-primary)" />}
                             <span className="sidebar-tooltip">{isDarkMode ? '라이트 모드' : '다크 모드'}</span>
@@ -293,6 +308,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
             <ProfileSettings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
             <AdminPanel isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} />
             <WorkspaceInviteModal isOpen={isInviteOpen} onClose={() => setIsInviteOpen(false)} />
+            <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
 
             {/* 모바일 워크스페이스 전환 시트 */}
             {isMobile && isWorkspaceOpen && (
