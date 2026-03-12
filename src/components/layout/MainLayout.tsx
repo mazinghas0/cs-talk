@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import './MainLayout.css';
-import { MessageSquare, UserCircle, Shield, Download, Layers, UserPlus, Loader2 } from 'lucide-react';
+import { MessageSquare, UserCircle, Shield, Download, Layers, UserPlus, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TicketList } from '../ticket/TicketList';
 import { ChatArea } from '../chat/ChatArea';
 import { ProfileSettings } from '../profile/ProfileSettings';
@@ -34,6 +34,8 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     const LIST_MAX = 520;
     const [sidebarWidth, setSidebarWidth] = useState(80);
     const [listWidth, setListWidth] = useState(320);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const sidebarWidthBeforeCollapse = useRef(80);
     const [draggingResizer, setDraggingResizer] = useState<'sidebar' | 'list' | null>(null);
     const dragStartX = useRef(0);
     const dragStartWidth = useRef(0);
@@ -66,6 +68,17 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
     }, [sidebarWidth, listWidth]);
+
+    const handleSidebarToggle = useCallback(() => {
+        if (isSidebarCollapsed) {
+            setSidebarWidth(sidebarWidthBeforeCollapse.current);
+            setIsSidebarCollapsed(false);
+        } else {
+            sidebarWidthBeforeCollapse.current = sidebarWidth;
+            setSidebarWidth(0);
+            setIsSidebarCollapsed(true);
+        }
+    }, [isSidebarCollapsed, sidebarWidth]);
 
     React.useEffect(() => {
         const mq = window.matchMedia('(max-width: 1024px)');
@@ -202,7 +215,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
 
             {/* 1. 사이드바 (데스크톱 전용) */}
             {!isMobile && (
-                <nav className="pane-sidebar" style={{ width: sidebarWidth }}>
+                <nav className={`pane-sidebar${isSidebarCollapsed ? ' collapsed' : ''}`} style={{ width: isSidebarCollapsed ? 0 : sidebarWidth }}>
                     <div className="sidebar-top">
                         <div className="sidebar-logo">CS</div>
                         <div className="divider" style={{ width: '20px', height: '1px', background: 'var(--glass-border)', margin: '0.5rem 0' }} />
@@ -231,6 +244,9 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                             <span className="sidebar-tooltip">프로필 설정</span>
                         </div>
                     </div>
+                    <div className="sidebar-collapse-btn" onClick={handleSidebarToggle}>
+                        {isSidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+                    </div>
                 </nav>
             )}
 
@@ -257,8 +273,15 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                 </div>
             )}
 
-            {/* 사이드바 ↔ 티켓 목록 리사이저 */}
-            {!isMobile && (
+            {/* 사이드바 접혔을 때 펼치기 탭 */}
+            {!isMobile && isSidebarCollapsed && (
+                <div className="sidebar-collapse-btn sidebar-expand-tab" onClick={handleSidebarToggle}>
+                    <ChevronRight size={14} />
+                </div>
+            )}
+
+            {/* 사이드바 ↔ 티켓 목록 리사이저 (접힌 상태에서는 숨김) */}
+            {!isMobile && !isSidebarCollapsed && (
                 <div
                     className={`pane-resizer${draggingResizer === 'sidebar' ? ' dragging' : ''}`}
                     onMouseDown={(e) => onResizerMouseDown(e, 'sidebar')}
