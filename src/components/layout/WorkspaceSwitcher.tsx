@@ -42,7 +42,10 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
     showCreateOnly = false,
 }) => {
     const { workspaces, currentWorkspace, setCurrentWorkspace, createWorkspace } = useAuthStore();
-    const { fetchTickets } = useTicketStore();
+    const { fetchTickets, unreadCounts, tickets } = useTicketStore();
+
+    // 현재 워크스페이스의 총 미읽음 수
+    const currentWorkspaceUnread = tickets.reduce((sum, t) => sum + (unreadCounts[t.id] || 0), 0);
     const [isCreating, setIsCreating] = React.useState(showCreateOnly);
     const [newName, setNewName] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
@@ -98,6 +101,11 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
                         }}
                     >
                         {ws.name.substring(0, 1).toUpperCase()}
+                        {isActive && currentWorkspaceUnread > 0 && (
+                            <span className="ws-unread-badge">
+                                {currentWorkspaceUnread > 99 ? '99+' : currentWorkspaceUnread}
+                            </span>
+                        )}
                     </button>
                 );
             })}

@@ -55,6 +55,26 @@
     border-radius: 0 4px 4px 0;
 }
 
+.workspace-item .ws-unread-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 9px;
+    background: var(--accent-danger);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    border: 2px solid var(--bg-primary);
+    pointer-events: none;
+}
+
 .workspace-item.add-workspace {
     color: var(--text-secondary);
     border-style: dashed;
