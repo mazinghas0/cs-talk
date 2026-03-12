@@ -5,6 +5,28 @@ import { useAuthStore } from '../../store/authStore';
 import { useTicketStore } from '../../store/ticketStore';
 import { Workspace } from '../../types/ticket';
 
+// 워크스페이스 이름 기반 고유 색상 — 동일 이름은 항상 같은 색
+const WS_COLORS = [
+    '#6366f1', // indigo
+    '#10b981', // emerald
+    '#f59e0b', // amber
+    '#ef4444', // red
+    '#3b82f6', // blue
+    '#8b5cf6', // violet
+    '#ec4899', // pink
+    '#14b8a6', // teal
+    '#f97316', // orange
+    '#84cc16', // lime
+];
+
+function getWorkspaceColor(name: string): string {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return WS_COLORS[Math.abs(hash) % WS_COLORS.length];
+}
+
 interface WorkspaceSwitcherProps {
     // 워크스페이스 선택 후 실행할 콜백 (모바일 모달 닫기 등에 활용)
     onSelect?: () => void;
@@ -59,16 +81,26 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
     return (
         <div className={`workspace-switcher${horizontal ? ' horizontal' : ''}`}>
             {/* 워크스페이스 목록 버튼들 */}
-            {!showCreateOnly && workspaces.map((ws) => (
-                <button
-                    key={ws.id}
-                    className={`workspace-item${currentWorkspace?.id === ws.id ? ' active' : ''}`}
-                    onClick={() => handleSelect(ws)}
-                    title={ws.name}
-                >
-                    {ws.name.substring(0, 1).toUpperCase()}
-                </button>
-            ))}
+            {!showCreateOnly && workspaces.map((ws) => {
+                const color = getWorkspaceColor(ws.name);
+                const isActive = currentWorkspace?.id === ws.id;
+                return (
+                    <button
+                        key={ws.id}
+                        className={`workspace-item${isActive ? ' active' : ''}`}
+                        onClick={() => handleSelect(ws)}
+                        title={ws.name}
+                        style={{
+                            background: color,
+                            borderColor: isActive ? 'white' : color,
+                            boxShadow: isActive ? `0 0 0 2px ${color}, 0 4px 12px ${color}55` : `0 2px 8px ${color}44`,
+                            color: 'white',
+                        }}
+                    >
+                        {ws.name.substring(0, 1).toUpperCase()}
+                    </button>
+                );
+            })}
 
             {/* 만들기 폼 또는 + 버튼 */}
             {isCreating ? (

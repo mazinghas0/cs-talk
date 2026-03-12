@@ -39,10 +39,8 @@
 }
 
 .workspace-item.active {
-    background: var(--accent-primary);
-    border-color: var(--accent-primary);
+    /* 색상은 인라인 style로 워크스페이스별 고유색 적용 */
     color: white;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 /* 데스크톱 사이드바: 활성 워크스페이스 왼쪽 인디케이터 */
