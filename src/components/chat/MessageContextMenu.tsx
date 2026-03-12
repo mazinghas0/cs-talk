@@ -1,23 +1,27 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import './MessageContextMenu.css';
-import { Copy, Share2 } from 'lucide-react';
+import { Copy, Share2, Trash2 } from 'lucide-react';
 import { Message } from '../../types/ticket';
 
 const MENU_WIDTH = 150;
-const MENU_HEIGHT = 96; // 2 항목 × 48px
+const MENU_HEIGHT_BASE = 96;  // 복사 + 공유
+const MENU_HEIGHT_WITH_DELETE = 144; // + 삭제
 
 interface Props {
     x: number;
     y: number;
     msg: Message;
+    isMe: boolean;
     onClose: () => void;
     onCopy: () => void;
     onShare: () => void;
+    onDelete: () => void;
 }
 
-export const MessageContextMenu: React.FC<Props> = ({ x, y, msg: _msg, onClose, onCopy, onShare }) => {
+export const MessageContextMenu: React.FC<Props> = ({ x, y, msg: _msg, isMe, onClose, onCopy, onShare, onDelete }) => {
     const menuRef = useRef<HTMLDivElement>(null);
+    const [confirmDelete, setConfirmDelete] = useState(false);
 
     useEffect(() => {
         const handleOutside = (e: MouseEvent | TouchEvent) => {
@@ -28,7 +32,6 @@ export const MessageContextMenu: React.FC<Props> = ({ x, y, msg: _msg, onClose, 
         const handleKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
         };
-        // setTimeout 0: 트리거 이벤트가 즉시 닫히는 것 방지
         const timer = setTimeout(() => {
             document.addEventListener('mousedown', handleOutside);
             document.addEventListener('touchstart', handleOutside);
@@ -42,9 +45,9 @@ export const MessageContextMenu: React.FC<Props> = ({ x, y, msg: _msg, onClose, 
         };
     }, [onClose]);
 
-    // 화면 경계 벗어남 보정
+    const menuHeight = isMe ? MENU_HEIGHT_WITH_DELETE : MENU_HEIGHT_BASE;
     const adjustedX = Math.min(x, window.innerWidth - MENU_WIDTH - 8);
-    const adjustedY = y + MENU_HEIGHT > window.innerHeight ? y - MENU_HEIGHT - 4 : y + 4;
+    const adjustedY = y + menuHeight > window.innerHeight ? y - menuHeight - 4 : y + 4;
 
     const menu = (
         <div
@@ -60,6 +63,22 @@ export const MessageContextMenu: React.FC<Props> = ({ x, y, msg: _msg, onClose, 
                 <Share2 size={14} />
                 <span>공유</span>
             </button>
+            {isMe && (
+                <>
+                    <div className="msg-ctx-divider" />
+                    {confirmDelete ? (
+                        <button className="msg-ctx-item danger" onClick={onDelete}>
+                            <Trash2 size={14} />
+                            <span>정말 삭제할까요?</span>
+                        </button>
+                    ) : (
+                        <button className="msg-ctx-item danger" onClick={() => setConfirmDelete(true)}>
+                            <Trash2 size={14} />
+                            <span>삭제</span>
+                        </button>
+                    )}
+                </>
+            )}
         </div>
     );
 

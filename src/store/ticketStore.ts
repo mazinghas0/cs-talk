@@ -37,6 +37,7 @@ interface TicketStore {
     requestResolution: (id: string) => Promise<void>;
     fetchMessages: (ticketId: string) => Promise<void>;
     sendMessage: (ticketId: string, content: string, userId: string, isInternal?: boolean, imageUrl?: string) => Promise<void>;
+    deleteMessage: (messageId: string) => Promise<void>;
     uploadImage: (file: File) => Promise<string>;
     setActiveTab: (tab: TicketStatus) => void;
     setSelectedTicketId: (id: string | null) => void;
@@ -240,6 +241,19 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 });
             }
         }
+    },
+
+    deleteMessage: async (messageId) => {
+        const { error } = await supabase
+            .from('messages')
+            .delete()
+            .eq('id', messageId);
+
+        if (error) throw error;
+
+        set((state) => ({
+            messages: state.messages.filter(m => m.id !== messageId),
+        }));
     },
 
     uploadImage: async (file: File) => {

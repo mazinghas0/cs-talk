@@ -17,7 +17,7 @@ interface ChatAreaProps {
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
-    const { tickets, selectedTicketId, messages, sendMessage, updateTicketStatus, deleteTicket, requestResolution, updateTicket } = useTicketStore();
+    const { tickets, selectedTicketId, messages, sendMessage, deleteMessage, updateTicketStatus, deleteTicket, requestResolution, updateTicket } = useTicketStore();
     const { user } = useAuthStore();
     const ticket = tickets.find(t => t.id === selectedTicketId);
 
@@ -194,6 +194,17 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
         } catch { /* 사용자 취소 또는 미지원 무시 */ }
         setContextMenu(null);
     }, [contextMenu, showCopyToast]);
+
+    const handleDeleteMessage = useCallback(async () => {
+        if (!contextMenu) return;
+        const id = contextMenu.msg.id;
+        setContextMenu(null);
+        try {
+            await deleteMessage(id);
+        } catch {
+            /* 삭제 실패 시 조용히 무시 — 서버 RLS에서 이미 차단됨 */
+        }
+    }, [contextMenu, deleteMessage]);
 
     if (!ticket) {
         return (
@@ -522,9 +533,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                     x={contextMenu.x}
                     y={contextMenu.y}
                     msg={contextMenu.msg}
+                    isMe={contextMenu.msg.user_id === user?.id}
                     onClose={handleMenuClose}
                     onCopy={handleCopy}
                     onShare={handleShare}
+                    onDelete={handleDeleteMessage}
                 />
             )}
 
