@@ -209,12 +209,12 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                         <WorkspaceSwitcher showName={sidebarWidth >= 100} />
                         <div className="divider" style={{ width: '20px', height: '1px', background: 'var(--glass-border)', margin: '0.5rem 0' }} />
                         {isAdmin && (
-                            <div className="sidebar-btn" onClick={() => setIsAdminOpen(true)}>
+                            <div className={`sidebar-btn${isAdminOpen ? ' active' : ''}`} onClick={() => setIsAdminOpen(true)}>
                                 <Shield size={22} color="var(--accent-primary)" />
                                 <span className="sidebar-tooltip">사용자 관리</span>
                             </div>
                         )}
-                        <div className="sidebar-btn" onClick={() => setIsInviteOpen(true)}>
+                        <div className={`sidebar-btn${isInviteOpen ? ' active' : ''}`} onClick={() => setIsInviteOpen(true)}>
                             <UserPlus size={22} color="var(--text-secondary)" />
                             <span className="sidebar-tooltip">팀원 초대</span>
                         </div>
@@ -226,7 +226,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                         )}
                     </div>
                     <div className="sidebar-bottom">
-                        <div className="sidebar-btn" onClick={() => setIsSettingsOpen(true)}>
+                        <div className={`sidebar-btn${isSettingsOpen ? ' active' : ''}`} onClick={() => setIsSettingsOpen(true)}>
                             <UserCircle size={30} color="var(--text-primary)" />
                             <span className="sidebar-tooltip">프로필 설정</span>
                         </div>
