@@ -200,3 +200,62 @@
     background: rgba(255, 255, 255, 0.15);
     color: var(--text-primary);
 }
+
+/* + 버튼 활성 상태 */
+.workspace-item.add-workspace.active-menu {
+    border-style: solid;
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+/* 워크스페이스 추가 래퍼 */
+.ws-add-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* 미니 메뉴 */
+.ws-add-menu {
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 0;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    min-width: 130px;
+}
+
+.ws-add-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.12s;
+}
+
+.ws-add-menu-item:hover {
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--accent-primary);
+}
+
+/* 참여 오류 메시지 */
+.ws-join-error {
+    font-size: 0.75rem;
+    color: var(--accent-danger);
+    margin: 2px 0 0;
+}

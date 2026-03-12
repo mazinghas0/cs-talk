@@ -41,13 +41,17 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
     showCreateOnly = false,
     showName = false,
 }) => {
-    const { workspaces, currentWorkspace, setCurrentWorkspace, createWorkspace } = useAuthStore();
+    const { workspaces, currentWorkspace, setCurrentWorkspace, createWorkspace, joinWorkspaceByCode } = useAuthStore();
     const { fetchTickets, unreadCounts, tickets } = useTicketStore();
 
     // 현재 워크스페이스의 총 미읽음 수
     const currentWorkspaceUnread = tickets.reduce((sum, t) => sum + (unreadCounts[t.id] || 0), 0);
     const [isCreating, setIsCreating] = React.useState(showCreateOnly);
+    const [isJoining, setIsJoining] = React.useState(false);
+    const [showAddMenu, setShowAddMenu] = React.useState(false);
     const [newName, setNewName] = React.useState('');
+    const [joinCode, setJoinCode] = React.useState('');
+    const [joinError, setJoinError] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
 
     const handleSelect = (workspace: Workspace) => {
@@ -79,6 +83,28 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
             setIsCreating(false);
             setNewName('');
         }
+    };
+
+    const handleJoinSubmit = async () => {
+        if (!joinCode.trim() || isLoading) return;
+        setIsLoading(true);
+        setJoinError('');
+        try {
+            await joinWorkspaceByCode(joinCode.trim());
+            await fetchTickets();
+            setJoinCode('');
+            setIsJoining(false);
+            onSelect?.();
+        } catch {
+            setJoinError('유효하지 않은 코드입니다.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleJoinKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') handleJoinSubmit();
+        if (e.key === 'Escape') { setIsJoining(false); setJoinCode(''); setJoinError(''); }
     };
 
     return (
@@ -113,8 +139,8 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
                 );
             })}
 
-            {/* 만들기 폼 또는 + 버튼 */}
-            {isCreating ? (
+            {/* 만들기 폼 */}
+            {isCreating && (
                 <div className={`workspace-create-form${horizontal ? ' horizontal' : ''}`}>
                     <input
                         className="workspace-name-input"
@@ -128,34 +154,65 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
                         disabled={isLoading}
                     />
                     <div className="workspace-create-actions">
-                        <button
-                            className="workspace-action-btn confirm"
-                            onClick={handleSubmit}
-                            disabled={!newName.trim() || isLoading}
-                            title="만들기"
-                        >
+                        <button className="workspace-action-btn confirm" onClick={handleSubmit} disabled={!newName.trim() || isLoading} title="만들기">
                             <Check size={14} />
                         </button>
                         {!showCreateOnly && (
-                            <button
-                                className="workspace-action-btn cancel"
-                                onClick={() => { setIsCreating(false); setNewName(''); }}
-                                title="취소"
-                                disabled={isLoading}
-                            >
+                            <button className="workspace-action-btn cancel" onClick={() => { setIsCreating(false); setNewName(''); }} title="취소" disabled={isLoading}>
                                 <X size={14} />
                             </button>
                         )}
                     </div>
                 </div>
-            ) : (
-                <button
-                    className="workspace-item add-workspace"
-                    title="워크스페이스 추가"
-                    onClick={() => setIsCreating(true)}
-                >
-                    <Plus size={20} />
-                </button>
+            )}
+
+            {/* 코드로 참여 폼 */}
+            {isJoining && (
+                <div className={`workspace-create-form${horizontal ? ' horizontal' : ''}`}>
+                    <input
+                        className="workspace-name-input"
+                        type="text"
+                        placeholder="초대 코드 입력..."
+                        value={joinCode}
+                        onChange={(e) => { setJoinCode(e.target.value); setJoinError(''); }}
+                        onKeyDown={handleJoinKeyDown}
+                        autoFocus
+                        maxLength={12}
+                        disabled={isLoading}
+                    />
+                    {joinError && <p className="ws-join-error">{joinError}</p>}
+                    <div className="workspace-create-actions">
+                        <button className="workspace-action-btn confirm" onClick={handleJoinSubmit} disabled={!joinCode.trim() || isLoading} title="참여">
+                            <Check size={14} />
+                        </button>
+                        <button className="workspace-action-btn cancel" onClick={() => { setIsJoining(false); setJoinCode(''); setJoinError(''); }} title="취소" disabled={isLoading}>
+                            <X size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* + 버튼 + 미니 메뉴 */}
+            {!isCreating && !isJoining && !showCreateOnly && (
+                <div className="ws-add-wrapper">
+                    <button
+                        className={`workspace-item add-workspace${showAddMenu ? ' active-menu' : ''}`}
+                        title="워크스페이스 추가"
+                        onClick={() => setShowAddMenu(v => !v)}
+                    >
+                        <Plus size={20} />
+                    </button>
+                    {showAddMenu && (
+                        <div className="ws-add-menu">
+                            <button className="ws-add-menu-item" onClick={() => { setShowAddMenu(false); setIsCreating(true); }}>
+                                <Plus size={14} /> 새로 만들기
+                            </button>
+                            <button className="ws-add-menu-item" onClick={() => { setShowAddMenu(false); setIsJoining(true); }}>
+                                <Check size={14} /> 코드로 참여
+                            </button>
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     );
