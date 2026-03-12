@@ -29,13 +29,13 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --keyboard-height: 0px;
 
-  /* 유동 타이포그래피 — clamp(최소, 화면비례, 최대) */
-  --text-xs:   clamp(0.7rem,  2.2vw, 0.8rem);
-  --text-sm:   clamp(0.85rem, 2.8vw, 0.95rem);
-  --text-base: clamp(0.95rem, 3.2vw, 1.05rem);
-  --text-md:   clamp(1rem,    3.8vw, 1.15rem);
-  --text-lg:   clamp(1.1rem,  4.5vw, 1.3rem);
-  --text-xl:   clamp(1.25rem, 5.5vw, 1.5rem);
+  /* 타이포그래피 스케일 — html font-size 기반 rem */
+  --text-xs:   0.72rem;
+  --text-sm:   0.875rem;
+  --text-base: 1rem;
+  --text-md:   1.1rem;
+  --text-lg:   1.25rem;
+  --text-xl:   1.5rem;
 }
 
 @media (max-width: 1200px) {
@@ -51,10 +51,11 @@
   }
 }
 
-/* 모바일 기준 html font-size — clamp()의 rem 앵커값 */
+/* 모바일 font-size — 화면 너비에 따라 자동 보간 */
 @media (max-width: 1024px) {
   html {
-    font-size: clamp(15px, 4.2vw, 18px);
+    /* 360px=18.7px / 390px=20.3px / 428px=22.3px */
+    font-size: clamp(17px, 5.2vw, 22px);
   }
 }
 
