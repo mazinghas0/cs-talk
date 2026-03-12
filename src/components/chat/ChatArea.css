@@ -619,3 +619,26 @@
     0%, 100% { opacity: 0.5; }
     50% { opacity: 1; }
 }
+/* 복사 완료 토스트 */
+.copy-toast {
+    position: fixed;
+    bottom: 88px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    z-index: 9998;
+    pointer-events: none;
+    animation: toast-pop 0.18s cubic-bezier(0.2, 0, 0, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+@keyframes toast-pop {
+    from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}

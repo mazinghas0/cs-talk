@@ -4,9 +4,12 @@ import { useTicketStore } from '../../store/ticketStore';
 import { useAuthStore } from '../../store/authStore';
 import { Send, FilePlus, MessageSquareWarning, Edit2, Trash2, X, ChevronLeft, Share2 } from 'lucide-react';
 import { ShareTicketModal } from './ShareTicketModal';
+import { MessageBubble } from './MessageBubble';
+import { MessageContextMenu } from './MessageContextMenu';
 import { format, isSameDay, isSameMinute } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { supabase } from '../../lib/supabase';
+import { Message } from '../../types/ticket';
 
 interface ChatAreaProps {
     onBack?: () => void;
@@ -219,6 +222,46 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
 
     const canSend = !isSending && !isUploading && (!!newMessage.trim() || !!pendingImageUrl);
 
+    // 메시지 컨텍스트 메뉴
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msg: Message } | null>(null);
+    const [copyToast, setCopyToast] = useState(false);
+
+    const handleMenuOpen = useCallback((pos: { x: number; y: number }, msg: Message) => {
+        setContextMenu({ x: pos.x, y: pos.y, msg });
+    }, []);
+
+    const handleMenuClose = useCallback(() => {
+        setContextMenu(null);
+    }, []);
+
+    const showCopyToast = useCallback(() => {
+        setCopyToast(true);
+        setTimeout(() => setCopyToast(false), 2000);
+    }, []);
+
+    const handleCopy = useCallback(async () => {
+        if (!contextMenu) return;
+        try {
+            await navigator.clipboard.writeText(contextMenu.msg.content);
+            showCopyToast();
+        } catch { /* 미지원 환경 무시 */ }
+        setContextMenu(null);
+    }, [contextMenu, showCopyToast]);
+
+    const handleShare = useCallback(async () => {
+        if (!contextMenu) return;
+        const text = contextMenu.msg.content;
+        try {
+            if (navigator.share) {
+                await navigator.share({ text });
+            } else {
+                await navigator.clipboard.writeText(text);
+                showCopyToast();
+            }
+        } catch { /* 사용자 취소 또는 미지원 무시 */ }
+        setContextMenu(null);
+    }, [contextMenu, showCopyToast]);
+
     return (
         <div className={`chat-area ambient-${ticket.priority}`}>
             {/* Header */}
@@ -313,15 +356,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                                         <span>{format(msgDate, 'yyyy년 M월 d일 (EEE)', { locale: ko })}</span>
                                     </div>
                                 )}
-                                <div className="message-wrapper internal">
-                                    <div className="message-bubble internal-bubble">
-                                        <p className="msg-text">{msg.content}</p>
-                                        {msg.image_url && (
-                                            <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />
-                                        )}
-                                        <span className="msg-time">{senderName} · {format(msgDate, 'a h:mm', { locale: ko })}</span>
-                                    </div>
-                                </div>
+                                <MessageBubble
+                                    msg={msg}
+                                    isMe={isMe}
+                                    isInternalMsg={true}
+                                    isContinued={false}
+                                    isLastInGroup={true}
+                                    senderName={senderName}
+                                    onMenuOpen={handleMenuOpen}
+                                />
                             </React.Fragment>
                         );
                     }
@@ -333,20 +376,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                                     <span>{format(msgDate, 'yyyy년 M월 d일 (EEE)', { locale: ko })}</span>
                                 </div>
                             )}
-                            <div className={`message-wrapper ${isMe ? 'admin-res' : 'user-req'} ${isContinued ? 'continued' : ''}`}>
-                                <div className={`message-bubble ${isMe ? 'res-bubble' : 'req-bubble'} ${isContinued ? 'bubble-continued' : ''}`}>
-                                    <p className="msg-text">{msg.content}</p>
-                                    {msg.image_url && (
-                                        <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />
-                                    )}
-                                    {isLastInGroup && (
-                                        <span className="msg-time">
-                                            {!isMe && (senderName + ' · ')}
-                                            {format(msgDate, 'a h:mm', { locale: ko })}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
+                            <MessageBubble
+                                msg={msg}
+                                isMe={isMe}
+                                isInternalMsg={false}
+                                isContinued={isContinued}
+                                isLastInGroup={isLastInGroup}
+                                senderName={senderName}
+                                onMenuOpen={handleMenuOpen}
+                            />
                         </React.Fragment>
                     );
                 })}
@@ -462,6 +500,21 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                 isOpen={isShareModalOpen}
                 onClose={() => setIsShareModalOpen(false)}
             />
+
+            {/* 메시지 컨텍스트 메뉴 */}
+            {contextMenu && (
+                <MessageContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    msg={contextMenu.msg}
+                    onClose={handleMenuClose}
+                    onCopy={handleCopy}
+                    onShare={handleShare}
+                />
+            )}
+
+            {/* 복사 완료 토스트 */}
+            {copyToast && <div className="copy-toast">복사됨</div>}
         </div>
     );
 };
