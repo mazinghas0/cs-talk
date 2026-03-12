@@ -280,6 +280,9 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
 
         console.log(`🔔 [Realtime] Subscribing to Workspace: ${currentWorkspace.name}...`);
 
+        // 초기 구독 시 fetchTickets는 TicketList useEffect가 담당 — 재연결 시에만 동기화
+        let isFirstSubscribe = true;
+
         const channel = supabase
             .channel(`db-changes-${currentWorkspace.id}`)
             .on('postgres_changes', {
@@ -390,10 +393,15 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 console.log('📡 [Realtime] Status:', status);
                 if (status === 'SUBSCRIBED') {
                     set({ isSubscribed: true, realtimeChannel: channel });
-                    // 재연결 시 끊긴 동안 놓친 메시지 동기화 (모바일 네트워크 전환 대비)
-                    get().fetchTickets();
-                    const selectedId = get().selectedTicketId;
-                    if (selectedId) get().fetchMessages(selectedId);
+                    if (isFirstSubscribe) {
+                        // 초기 구독 — TicketList useEffect가 이미 fetchTickets 호출하므로 스킵
+                        isFirstSubscribe = false;
+                    } else {
+                        // 재연결 — 끊긴 동안 놓친 데이터 동기화 (모바일 네트워크 전환 대비)
+                        get().fetchTickets();
+                        const selectedId = get().selectedTicketId;
+                        if (selectedId) get().fetchMessages(selectedId);
+                    }
                 } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
                     // 채널 오류 시 isSubscribed 초기화 → App.tsx 워크스페이스 변경 없이는
                     // 자동 재구독이 안 되므로 채널을 직접 제거 후 재구독
@@ -408,6 +416,11 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         return () => {
             console.log('🔕 [Realtime] Unsubscribing...');
             supabase.removeChannel(channel);
+            // CHANNEL_ERROR 재구독으로 교체된 채널도 정리 (채널 누수 방지)
+            const currentChannel = get().realtimeChannel;
+            if (currentChannel && currentChannel !== channel) {
+                supabase.removeChannel(currentChannel);
+            }
             set({ isSubscribed: false, realtimeChannel: null });
         };
     }

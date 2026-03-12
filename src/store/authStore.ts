@@ -82,7 +82,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     signOut: async () => {
         await supabase.auth.signOut();
-        set({ user: null, session: null, profile: null, workspaces: [], currentWorkspace: null, allProfiles: [] });
+        set({ user: null, session: null, profile: null, isAdmin: false, workspaces: [], currentWorkspace: null, allProfiles: [] });
     },
 
     fetchProfile: async (id) => {
