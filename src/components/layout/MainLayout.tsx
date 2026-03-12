@@ -36,6 +36,20 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     const [listWidth, setListWidth] = useState(320);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const sidebarWidthBeforeCollapse = useRef(80);
+
+    type UserStatus = 'online' | 'away' | 'busy';
+    const STATUS_CYCLE: UserStatus[] = ['online', 'away', 'busy'];
+    const STATUS_LABEL: Record<UserStatus, string> = { online: '온라인', away: '자리비움', busy: '바쁨' };
+    const [userStatus, setUserStatus] = useState<UserStatus>(
+        () => (localStorage.getItem('cs_talk_status') as UserStatus) || 'online'
+    );
+    const cycleStatus = useCallback(() => {
+        setUserStatus(prev => {
+            const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(prev) + 1) % STATUS_CYCLE.length];
+            localStorage.setItem('cs_talk_status', next);
+            return next;
+        });
+    }, []);
     const [draggingResizer, setDraggingResizer] = useState<'sidebar' | 'list' | null>(null);
     const dragStartX = useRef(0);
     const dragStartWidth = useRef(0);
@@ -241,7 +255,12 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                     <div className="sidebar-bottom">
                         <div className={`sidebar-btn${isSettingsOpen ? ' active' : ''}`} onClick={() => setIsSettingsOpen(true)}>
                             <UserCircle size={30} color="var(--text-primary)" />
-                            <span className="sidebar-tooltip">프로필 설정</span>
+                            <span
+                                className={`status-dot ${userStatus}`}
+                                title={STATUS_LABEL[userStatus]}
+                                onClick={(e) => { e.stopPropagation(); cycleStatus(); }}
+                            />
+                            <span className="sidebar-tooltip">프로필 설정 ({STATUS_LABEL[userStatus]})</span>
                         </div>
                     </div>
                     <div className="sidebar-collapse-btn" onClick={handleSidebarToggle}>

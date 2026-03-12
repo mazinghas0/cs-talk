@@ -243,6 +243,28 @@
     box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.4);
 }
 
+/* 내 상태 도트 */
+.status-dot {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--bg-secondary);
+    cursor: pointer;
+    z-index: 5;
+    transition: transform 0.15s;
+}
+
+.status-dot:hover {
+    transform: scale(1.3);
+}
+
+.status-dot.online  { background: var(--accent-success); }
+.status-dot.away    { background: var(--accent-warning); }
+.status-dot.busy    { background: var(--accent-danger); }
+
 .sidebar-btn .sidebar-tooltip {
     position: absolute;
     left: calc(100% + 10px);
