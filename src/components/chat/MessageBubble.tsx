@@ -63,7 +63,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     if (isInternalMsg) {
         return (
             <div className="message-wrapper internal">
-                <div className="message-bubble internal-bubble" {...bubbleEvents}>
+                <div className="message-bubble internal-bubble" data-msg-id={msg.id} {...bubbleEvents}>
                     <p className="msg-text">{msg.content}</p>
                     {msg.image_url && (
                         <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />
@@ -78,6 +78,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         <div className={`message-wrapper ${isMe ? 'admin-res' : 'user-req'} ${isContinued ? 'continued' : ''}`}>
             <div
                 className={`message-bubble ${isMe ? 'res-bubble' : 'req-bubble'} ${isContinued ? 'bubble-continued' : ''}`}
+                data-msg-id={msg.id}
                 {...bubbleEvents}
             >
                 <p className="msg-text">{msg.content}</p>

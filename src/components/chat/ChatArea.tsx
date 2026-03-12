@@ -10,6 +10,7 @@ import { format, isSameDay, isSameMinute } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { supabase } from '../../lib/supabase';
 import { Message } from '../../types/ticket';
+import html2canvas from 'html2canvas';
 
 interface ChatAreaProps {
     onBack?: () => void;
@@ -195,6 +196,45 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
         } catch { /* 사용자 취소 또는 미지원 무시 */ }
         setContextMenu(null);
     }, [contextMenu, showCopyToast]);
+
+    const handleCapture = useCallback(async () => {
+        if (!contextMenu) return;
+        const msgId = contextMenu.msg.id;
+        setContextMenu(null);
+
+        // data-msg-id로 버블 요소 탐색
+        const el = document.querySelector<HTMLElement>(`[data-msg-id="${msgId}"]`);
+        if (!el) return;
+
+        try {
+            const canvas = await html2canvas(el, {
+                backgroundColor: null,
+                scale: 2,          // 레티나 해상도
+                useCORS: true,     // 첨부 이미지 CORS 허용
+                logging: false,
+            });
+
+            const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+            if (!blob) return;
+
+            // Web Share API 지원 시 공유, 아니면 다운로드
+            if (navigator.share && navigator.canShare?.({ files: [new File([blob], 'message.png', { type: 'image/png' })] })) {
+                await navigator.share({
+                    files: [new File([blob], 'message.png', { type: 'image/png' })],
+                });
+            } else {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `cs-talk-${Date.now()}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        } catch {
+            setErrorToast('캡쳐에 실패했습니다.');
+            setTimeout(() => setErrorToast(''), 3000);
+        }
+    }, [contextMenu]);
 
     const handleDeleteMessage = useCallback(async () => {
         if (!contextMenu) return;
@@ -540,6 +580,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                     onClose={handleMenuClose}
                     onCopy={handleCopy}
                     onShare={handleShare}
+                    onCapture={handleCapture}
                     onDelete={handleDeleteMessage}
                 />
             )}

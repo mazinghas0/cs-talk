@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import './MessageContextMenu.css';
-import { Copy, Share2, Trash2 } from 'lucide-react';
+import { Copy, Share2, Camera, Trash2 } from 'lucide-react';
 import { Message } from '../../types/ticket';
 
 const MENU_WIDTH = 150;
-const MENU_HEIGHT_BASE = 96;  // 복사 + 공유
-const MENU_HEIGHT_WITH_DELETE = 144; // + 삭제
+const MENU_HEIGHT_BASE = 144;  // 복사 + 공유 + 캡쳐
+const MENU_HEIGHT_WITH_DELETE = 196; // + 삭제
 
 interface Props {
     x: number;
@@ -16,10 +16,11 @@ interface Props {
     onClose: () => void;
     onCopy: () => void;
     onShare: () => void;
+    onCapture: () => void;
     onDelete: () => void;
 }
 
-export const MessageContextMenu: React.FC<Props> = ({ x, y, msg: _msg, isMe, onClose, onCopy, onShare, onDelete }) => {
+export const MessageContextMenu: React.FC<Props> = ({ x, y, msg: _msg, isMe, onClose, onCopy, onShare, onCapture, onDelete }) => {
     const menuRef = useRef<HTMLDivElement>(null);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -62,6 +63,10 @@ export const MessageContextMenu: React.FC<Props> = ({ x, y, msg: _msg, isMe, onC
             <button className="msg-ctx-item" onClick={onShare}>
                 <Share2 size={14} />
                 <span>공유</span>
+            </button>
+            <button className="msg-ctx-item" onClick={onCapture}>
+                <Camera size={14} />
+                <span>캡쳐</span>
             </button>
             {isMe && (
                 <>
