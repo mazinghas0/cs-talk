@@ -244,16 +244,31 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     },
 
     deleteMessage: async (messageId) => {
-        const { error } = await supabase
+        // count: 'exact' → RLS로 0건 삭제될 때 error 없이 통과하는 문제 감지
+        const { error, count } = await supabase
             .from('messages')
-            .delete()
+            .delete({ count: 'exact' })
             .eq('id', messageId);
 
         if (error) throw error;
+        if (count === 0) throw new Error('삭제 권한이 없거나 이미 삭제된 메시지입니다.');
+
+        // 삭제된 메시지의 ticket_id 확인 (broadcast 전송용)
+        const deletedMsg = get().messages.find(m => m.id === messageId);
 
         set((state) => ({
             messages: state.messages.filter(m => m.id !== messageId),
         }));
+
+        // 다른 클라이언트에 삭제 이벤트 broadcast (postgres_changes DELETE 대신 사용)
+        const { realtimeChannel } = get();
+        if (realtimeChannel && deletedMsg) {
+            realtimeChannel.send({
+                type: 'broadcast',
+                event: 'delete-message',
+                payload: { id: messageId, ticket_id: deletedMsg.ticket_id },
+            });
+        }
     },
 
     uploadImage: async (file: File) => {
@@ -391,6 +406,14 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                             ...state.unreadCounts,
                             [newMessage.ticket_id]: (state.unreadCounts[newMessage.ticket_id] || 0) + 1
                         }
+                    }));
+                }
+            })
+            .on('broadcast', { event: 'delete-message' }, ({ payload }) => {
+                const { id, ticket_id } = payload as { id: string; ticket_id: string };
+                if (ticket_id === get().selectedTicketId) {
+                    set((state) => ({
+                        messages: state.messages.filter(m => m.id !== id),
                     }));
                 }
             })

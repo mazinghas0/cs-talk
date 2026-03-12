@@ -158,6 +158,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
     // 메시지 컨텍스트 메뉴 — if (!ticket) return 이전에 선언 (Rules of Hooks 준수)
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msg: Message } | null>(null);
     const [copyToast, setCopyToast] = useState(false);
+    const [errorToast, setErrorToast] = useState('');
 
     const handleMenuOpen = useCallback((pos: { x: number; y: number }, msg: Message) => {
         setContextMenu({ x: pos.x, y: pos.y, msg });
@@ -201,8 +202,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
         setContextMenu(null);
         try {
             await deleteMessage(id);
-        } catch {
-            /* 삭제 실패 시 조용히 무시 — 서버 RLS에서 이미 차단됨 */
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : '삭제에 실패했습니다.';
+            setErrorToast(msg);
+            setTimeout(() => setErrorToast(''), 3000);
         }
     }, [contextMenu, deleteMessage]);
 
@@ -543,6 +546,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
 
             {/* 복사 완료 토스트 */}
             {copyToast && <div className="copy-toast">복사됨</div>}
+
+            {/* 에러 토스트 */}
+            {errorToast && <div className="copy-toast error-toast">{errorToast}</div>}
         </div>
     );
 };
