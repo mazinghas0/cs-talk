@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { RealtimeChannel } from '@supabase/supabase-js';
-import { Ticket, TicketStatus, TicketPriority, Message, MessageReaction } from '../types/ticket';
+import { Ticket, TicketStatus, TicketPriority, Message, MessageReaction, MessageBookmark } from '../types/ticket';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from './authStore';
 
@@ -22,6 +22,8 @@ interface TicketStore {
     tickets: Ticket[];
     messages: Message[];
     reactions: Record<string, MessageReaction[]>; // key: message_id
+    bookmarks: MessageBookmark[];
+    isBookmarkPanelOpen: boolean;
     activeTab: TicketStatus;
     selectedTicketId: string | null;
     isLoadingData: boolean;
@@ -40,6 +42,9 @@ interface TicketStore {
     fetchMessages: (ticketId: string) => Promise<void>;
     fetchReactions: (messageIds: string[]) => Promise<void>;
     toggleReaction: (messageId: string, emoji: string) => Promise<void>;
+    fetchBookmarks: () => Promise<void>;
+    toggleBookmark: (messageId: string) => Promise<void>;
+    setBookmarkPanelOpen: (open: boolean) => void;
     sendMessage: (ticketId: string, content: string, userId: string, isInternal?: boolean, imageUrl?: string, replyToId?: string) => Promise<void>;
     deleteMessage: (messageId: string) => Promise<void>;
     uploadImage: (file: File) => Promise<string>;
@@ -52,6 +57,8 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     tickets: [],
     messages: [],
     reactions: {},
+    bookmarks: [],
+    isBookmarkPanelOpen: false,
     activeTab: 'in_progress',
     selectedTicketId: null,
     isLoadingData: false,
@@ -269,6 +276,55 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
             }));
         }
     },
+
+    fetchBookmarks: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+            .from('message_bookmarks')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+        if (error || !data) return;
+        set({ bookmarks: data as MessageBookmark[] });
+    },
+
+    toggleBookmark: async (messageId) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const existing = get().bookmarks.find(b => b.message_id === messageId);
+
+        if (existing) {
+            await supabase.from('message_bookmarks').delete().eq('id', existing.id);
+            set((state) => ({
+                bookmarks: state.bookmarks.filter(b => b.id !== existing.id),
+            }));
+        } else {
+            const msg = get().messages.find(m => m.id === messageId);
+            const ticketId = get().selectedTicketId;
+            if (!msg || !ticketId) return;
+
+            const { data, error } = await supabase
+                .from('message_bookmarks')
+                .insert([{
+                    message_id: messageId,
+                    user_id: user.id,
+                    content_snapshot: msg.content,
+                    ticket_id: ticketId,
+                }])
+                .select()
+                .single();
+            if (error || !data) return;
+            set((state) => ({
+                bookmarks: [data as MessageBookmark, ...state.bookmarks],
+            }));
+        }
+    },
+
+    setBookmarkPanelOpen: (open) => set({ isBookmarkPanelOpen: open }),
 
     sendMessage: async (ticketId, content, userId, isInternal = false, imageUrl, replyToId) => {
         const { data, error } = await supabase

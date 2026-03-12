@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import './MessageContextMenu.css';
-import { Copy, Share2, Camera, MessageSquareReply, Trash2 } from 'lucide-react';
+import { Copy, Share2, Camera, MessageSquareReply, Trash2, Bookmark } from 'lucide-react';
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 import { Message } from '../../types/ticket';
 
 const MENU_WIDTH = 200;
-const MENU_HEIGHT_BASE = 240;  // 이모지 피커 + 복사 + 공유 + 캡쳐 + 댓글
-const MENU_HEIGHT_WITH_DELETE = 292; // + 삭제
+const MENU_HEIGHT_BASE = 288;  // 이모지 피커 + 복사 + 공유 + 캡쳐 + 댓글 + 북마크
+const MENU_HEIGHT_WITH_DELETE = 340; // + 삭제
 
 interface Props {
     x: number;
@@ -16,16 +16,18 @@ interface Props {
     msg: Message;
     isMe: boolean;
     myReactions: string[]; // 내가 이미 누른 이모지 목록
+    isBookmarked: boolean;
     onClose: () => void;
     onCopy: () => void;
     onShare: () => void;
     onCapture: () => void;
     onReply: () => void;
     onReact: (emoji: string) => void;
+    onBookmark: () => void;
     onDelete: () => void;
 }
 
-export const MessageContextMenu: React.FC<Props> = ({ x, y, msg: _msg, isMe, myReactions, onClose, onCopy, onShare, onCapture, onReply, onReact, onDelete }) => {
+export const MessageContextMenu: React.FC<Props> = ({ x, y, msg: _msg, isMe, myReactions, isBookmarked, onClose, onCopy, onShare, onCapture, onReply, onReact, onBookmark, onDelete }) => {
     const menuRef = useRef<HTMLDivElement>(null);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -89,6 +91,10 @@ export const MessageContextMenu: React.FC<Props> = ({ x, y, msg: _msg, isMe, myR
             <button className="msg-ctx-item" onClick={onReply}>
                 <MessageSquareReply size={14} />
                 <span>댓글</span>
+            </button>
+            <button className={`msg-ctx-item${isBookmarked ? ' bookmarked' : ''}`} onClick={() => { onBookmark(); onClose(); }}>
+                <Bookmark size={14} />
+                <span>{isBookmarked ? '북마크 해제' : '북마크'}</span>
             </button>
             {isMe && (
                 <>

@@ -42,6 +42,15 @@ export interface MessageReaction {
     created_at: string;
 }
 
+export interface MessageBookmark {
+    id: string;
+    message_id: string;
+    user_id: string;
+    content_snapshot: string;
+    ticket_id: string;
+    created_at: string;
+}
+
 export interface Message {
     id: string;
     ticket_id: string;

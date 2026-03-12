@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './ChatArea.css';
 import { useTicketStore } from '../../store/ticketStore';
 import { useAuthStore } from '../../store/authStore';
-import { Send, FilePlus, MessageSquareWarning, Edit2, Trash2, X, ChevronLeft, Share2 } from 'lucide-react';
+import { Send, FilePlus, MessageSquareWarning, Edit2, Trash2, X, ChevronLeft, Share2, Bookmark } from 'lucide-react';
 import { ShareTicketModal } from './ShareTicketModal';
 import { MessageBubble } from './MessageBubble';
 import { MessageContextMenu } from './MessageContextMenu';
+import { BookmarkPanel } from './BookmarkPanel';
 import { format, isSameDay, isSameMinute } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { supabase } from '../../lib/supabase';
@@ -18,7 +19,7 @@ interface ChatAreaProps {
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
-    const { tickets, selectedTicketId, messages, reactions, toggleReaction, sendMessage, deleteMessage, updateTicketStatus, deleteTicket, requestResolution, updateTicket } = useTicketStore();
+    const { tickets, selectedTicketId, messages, reactions, toggleReaction, sendMessage, deleteMessage, updateTicketStatus, deleteTicket, requestResolution, updateTicket, bookmarks, isBookmarkPanelOpen, setBookmarkPanelOpen, toggleBookmark, fetchBookmarks } = useTicketStore();
     const { user } = useAuthStore();
     const ticket = tickets.find(t => t.id === selectedTicketId);
 
@@ -71,6 +72,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
             document.documentElement.style.setProperty('--keyboard-height', '0px');
         };
     }, []);
+
+    // 북마크 초기 로드
+    useEffect(() => {
+        fetchBookmarks();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // 채팅방 전환 시 즉시 맨 아래로 이동
     useEffect(() => {
@@ -263,6 +269,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
         await toggleReaction(contextMenu.msg.id, emoji);
     }, [contextMenu, toggleReaction]);
 
+    const handleBookmark = useCallback(async () => {
+        if (!contextMenu) return;
+        await toggleBookmark(contextMenu.msg.id);
+    }, [contextMenu, toggleBookmark]);
+
     const handleScrollToReply = useCallback((msgId: string) => {
         const el = document.querySelector<HTMLElement>(`[data-msg-id="${msgId}"]`);
         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -355,6 +366,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                     </span>
                 </div>
                 <div className="chat-header-actions">
+                    <button
+                        className={`icon-btn-header${isBookmarkPanelOpen ? ' active' : ''}`}
+                        onClick={() => setBookmarkPanelOpen(!isBookmarkPanelOpen)}
+                        title="북마크"
+                    >
+                        <Bookmark size={16} />
+                    </button>
                     {ticket.status !== 'resolved' && (
                         <>
                             {isAuthor ? (
@@ -646,12 +664,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                     myReactions={(reactions[contextMenu.msg.id] ?? [])
                         .filter(r => r.user_id === user?.id)
                         .map(r => r.emoji)}
+                    isBookmarked={bookmarks.some(b => b.message_id === contextMenu.msg.id)}
                     onClose={handleMenuClose}
                     onCopy={handleCopy}
                     onShare={handleShare}
                     onCapture={handleCapture}
                     onReply={handleReply}
                     onReact={handleReact}
+                    onBookmark={handleBookmark}
                     onDelete={handleDeleteMessage}
                 />
             )}
@@ -661,6 +681,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
 
             {/* 에러 토스트 */}
             {errorToast && <div className="copy-toast error-toast">{errorToast}</div>}
+
+            {/* 북마크 패널 */}
+            <BookmarkPanel
+                isOpen={isBookmarkPanelOpen}
+                onClose={() => setBookmarkPanelOpen(false)}
+                onScrollToMessage={handleScrollToReply}
+            />
         </div>
     );
 };
