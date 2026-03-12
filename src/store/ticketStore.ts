@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { RealtimeChannel } from '@supabase/supabase-js';
-import { Ticket, TicketStatus, TicketPriority, Message } from '../types/ticket';
+import { Ticket, TicketStatus, TicketPriority, Message, MessageReaction } from '../types/ticket';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from './authStore';
 
@@ -21,6 +21,7 @@ interface RealtimeMessagePayload {
 interface TicketStore {
     tickets: Ticket[];
     messages: Message[];
+    reactions: Record<string, MessageReaction[]>; // key: message_id
     activeTab: TicketStatus;
     selectedTicketId: string | null;
     isLoadingData: boolean;
@@ -37,6 +38,8 @@ interface TicketStore {
     updateTicket: (id: string, updates: Partial<Ticket>) => Promise<void>;
     requestResolution: (id: string) => Promise<void>;
     fetchMessages: (ticketId: string) => Promise<void>;
+    fetchReactions: (messageIds: string[]) => Promise<void>;
+    toggleReaction: (messageId: string, emoji: string) => Promise<void>;
     sendMessage: (ticketId: string, content: string, userId: string, isInternal?: boolean, imageUrl?: string, replyToId?: string) => Promise<void>;
     deleteMessage: (messageId: string) => Promise<void>;
     uploadImage: (file: File) => Promise<string>;
@@ -48,6 +51,7 @@ interface TicketStore {
 export const useTicketStore = create<TicketStore>((set, get) => ({
     tickets: [],
     messages: [],
+    reactions: {},
     activeTab: 'in_progress',
     selectedTicketId: null,
     isLoadingData: false,
@@ -212,6 +216,57 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
             console.error('Error fetching messages:', error);
         } else {
             set({ messages: data as Message[] });
+            const ids = (data as Message[]).map(m => m.id);
+            if (ids.length > 0) get().fetchReactions(ids);
+        }
+    },
+
+    fetchReactions: async (messageIds) => {
+        const { data, error } = await supabase
+            .from('message_reactions')
+            .select('*')
+            .in('message_id', messageIds);
+
+        if (error || !data) return;
+
+        const grouped: Record<string, MessageReaction[]> = {};
+        for (const r of data as MessageReaction[]) {
+            if (!grouped[r.message_id]) grouped[r.message_id] = [];
+            grouped[r.message_id].push(r);
+        }
+        set({ reactions: grouped });
+    },
+
+    toggleReaction: async (messageId, emoji) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const current = get().reactions[messageId] ?? [];
+        const existing = current.find(r => r.user_id === user.id && r.emoji === emoji);
+
+        if (existing) {
+            // 이미 있으면 취소
+            await supabase.from('message_reactions').delete().eq('id', existing.id);
+            set((state) => ({
+                reactions: {
+                    ...state.reactions,
+                    [messageId]: (state.reactions[messageId] ?? []).filter(r => r.id !== existing.id),
+                },
+            }));
+        } else {
+            // 없으면 추가
+            const { data, error } = await supabase
+                .from('message_reactions')
+                .insert([{ message_id: messageId, user_id: user.id, emoji }])
+                .select()
+                .single();
+            if (error || !data) return;
+            set((state) => ({
+                reactions: {
+                    ...state.reactions,
+                    [messageId]: [...(state.reactions[messageId] ?? []), data as MessageReaction],
+                },
+            }));
         }
     },
 
@@ -424,6 +479,31 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                         messages: state.messages.filter(m => m.id !== id),
                     }));
                 }
+            })
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_reactions' }, (payload) => {
+                const r = payload.new as MessageReaction;
+                // 현재 채팅방 메시지에 해당하는 경우만 반영
+                if (get().messages.some(m => m.id === r.message_id)) {
+                    set((state) => {
+                        const list = state.reactions[r.message_id] ?? [];
+                        if (list.some(x => x.id === r.id)) return state;
+                        return {
+                            reactions: {
+                                ...state.reactions,
+                                [r.message_id]: [...list, r],
+                            },
+                        };
+                    });
+                }
+            })
+            .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'message_reactions' }, (payload) => {
+                const r = payload.old as { id: string; message_id: string };
+                set((state) => ({
+                    reactions: {
+                        ...state.reactions,
+                        [r.message_id]: (state.reactions[r.message_id] ?? []).filter(x => x.id !== r.id),
+                    },
+                }));
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles_tickets_reads' }, async (payload) => {
                 const newRead = payload.new as { profile_id: string; ticket_id: string; last_read_at: string } | undefined;

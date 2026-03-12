@@ -2,26 +2,30 @@ import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import './MessageContextMenu.css';
 import { Copy, Share2, Camera, MessageSquareReply, Trash2 } from 'lucide-react';
+
+const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 import { Message } from '../../types/ticket';
 
-const MENU_WIDTH = 150;
-const MENU_HEIGHT_BASE = 192;  // 복사 + 공유 + 캡쳐 + 댓글
-const MENU_HEIGHT_WITH_DELETE = 248; // + 삭제
+const MENU_WIDTH = 200;
+const MENU_HEIGHT_BASE = 240;  // 이모지 피커 + 복사 + 공유 + 캡쳐 + 댓글
+const MENU_HEIGHT_WITH_DELETE = 292; // + 삭제
 
 interface Props {
     x: number;
     y: number;
     msg: Message;
     isMe: boolean;
+    myReactions: string[]; // 내가 이미 누른 이모지 목록
     onClose: () => void;
     onCopy: () => void;
     onShare: () => void;
     onCapture: () => void;
     onReply: () => void;
+    onReact: (emoji: string) => void;
     onDelete: () => void;
 }
 
-export const MessageContextMenu: React.FC<Props> = ({ x, y, msg: _msg, isMe, onClose, onCopy, onShare, onCapture, onReply, onDelete }) => {
+export const MessageContextMenu: React.FC<Props> = ({ x, y, msg: _msg, isMe, myReactions, onClose, onCopy, onShare, onCapture, onReply, onReact, onDelete }) => {
     const menuRef = useRef<HTMLDivElement>(null);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -57,6 +61,19 @@ export const MessageContextMenu: React.FC<Props> = ({ x, y, msg: _msg, isMe, onC
             className="msg-context-menu"
             style={{ left: adjustedX, top: adjustedY }}
         >
+            {/* 이모지 피커 */}
+            <div className="msg-ctx-emoji-row">
+                {EMOJIS.map(emoji => (
+                    <button
+                        key={emoji}
+                        className={`msg-ctx-emoji-btn${myReactions.includes(emoji) ? ' active' : ''}`}
+                        onClick={() => { onReact(emoji); onClose(); }}
+                    >
+                        {emoji}
+                    </button>
+                ))}
+            </div>
+            <div className="msg-ctx-divider" />
             <button className="msg-ctx-item" onClick={onCopy}>
                 <Copy size={14} />
                 <span>복사</span>

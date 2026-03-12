@@ -34,6 +34,14 @@ export interface WorkspaceMember {
     joined_at: string;
 }
 
+export interface MessageReaction {
+    id: string;
+    message_id: string;
+    user_id: string;
+    emoji: string;
+    created_at: string;
+}
+
 export interface Message {
     id: string;
     ticket_id: string;
