@@ -6,6 +6,36 @@
     width: 100%;
 }
 
+/* 이름 표시 모드: 버튼을 가로로 늘림 */
+.workspace-switcher.show-name {
+    align-items: stretch;
+    padding: 0 8px;
+}
+
+.workspace-switcher.show-name .workspace-item {
+    width: 100%;
+    height: 40px;
+    border-radius: 10px;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 0 10px;
+}
+
+.ws-initial {
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.ws-name-label {
+    font-size: 0.82rem;
+    font-weight: 500;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    opacity: 0.9;
+}
+
 /* 가로 배치 모드 (모바일 시트용) */
 .workspace-switcher.horizontal {
     flex-direction: row;

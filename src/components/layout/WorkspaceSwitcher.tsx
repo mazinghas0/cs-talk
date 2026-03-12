@@ -28,18 +28,18 @@ function getWorkspaceColor(name: string): string {
 }
 
 interface WorkspaceSwitcherProps {
-    // 워크스페이스 선택 후 실행할 콜백 (모바일 모달 닫기 등에 활용)
     onSelect?: () => void;
-    // 가로 배치 모드 (모바일 시트에서 사용)
     horizontal?: boolean;
-    // 만들기 폼만 표시 (워크스페이스가 없을 때 안내 화면에서 사용)
     showCreateOnly?: boolean;
+    // 사이드바 너비 확장 시 워크스페이스 이름 텍스트 표시
+    showName?: boolean;
 }
 
 export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
     onSelect,
     horizontal = false,
     showCreateOnly = false,
+    showName = false,
 }) => {
     const { workspaces, currentWorkspace, setCurrentWorkspace, createWorkspace } = useAuthStore();
     const { fetchTickets, unreadCounts, tickets } = useTicketStore();
@@ -82,7 +82,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
     };
 
     return (
-        <div className={`workspace-switcher${horizontal ? ' horizontal' : ''}`}>
+        <div className={`workspace-switcher${horizontal ? ' horizontal' : ''}${showName ? ' show-name' : ''}`}>
             {/* 워크스페이스 목록 버튼들 */}
             {!showCreateOnly && workspaces.map((ws) => {
                 const color = getWorkspaceColor(ws.name);
@@ -100,7 +100,10 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
                             color: 'white',
                         }}
                     >
-                        {ws.name.substring(0, 1).toUpperCase()}
+                        <span className="ws-initial">{ws.name.substring(0, 1).toUpperCase()}</span>
+                        {showName && (
+                            <span className="ws-name-label">{ws.name}</span>
+                        )}
                         {isActive && currentWorkspaceUnread > 0 && (
                             <span className="ws-unread-badge">
                                 {currentWorkspaceUnread > 99 ? '99+' : currentWorkspaceUnread}

@@ -206,7 +206,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                     <div className="sidebar-top">
                         <div className="sidebar-logo">CS</div>
                         <div className="divider" style={{ width: '20px', height: '1px', background: 'var(--glass-border)', margin: '0.5rem 0' }} />
-                        <WorkspaceSwitcher />
+                        <WorkspaceSwitcher showName={sidebarWidth >= 100} />
                         <div className="divider" style={{ width: '20px', height: '1px', background: 'var(--glass-border)', margin: '0.5rem 0' }} />
                         {isAdmin && (
                             <div className="sidebar-btn" onClick={() => setIsAdminOpen(true)}>
