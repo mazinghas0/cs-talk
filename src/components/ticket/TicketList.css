@@ -12,7 +12,7 @@
 }
 
 .ticket-list-header .title {
-    font-size: 1.25rem;
+    font-size: var(--text-lg);
     font-weight: 700;
     margin: 0;
 }
@@ -178,7 +178,7 @@
 }
 
 .priority-badge {
-    font-size: 0.7rem;
+    font-size: var(--text-xs);
     font-weight: 700;
     padding: 2px 6px;
     border-radius: 4px;
@@ -209,11 +209,11 @@
     align-items: center;
     gap: 4px;
     color: var(--text-secondary);
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
 }
 
 .ticket-title {
-    font-size: 1rem;
+    font-size: var(--text-md);
     font-weight: 600;
     margin-bottom: 0.25rem;
     color: var(--text-primary);
@@ -223,7 +223,7 @@
 }
 
 .ticket-desc {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     color: var(--text-secondary);
     line-height: 1.4;
     display: -webkit-box;
@@ -235,24 +235,6 @@
 }
 
 @media (max-width: 1024px) {
-    .ticket-title {
-        font-size: 1.1rem;
-    }
-
-    .ticket-desc {
-        font-size: 0.95rem;
-        line-height: 1.5;
-    }
-
-    .time {
-        font-size: 0.85rem;
-    }
-
-    .priority-badge {
-        font-size: 0.8rem;
-        padding: 3px 7px;
-    }
-
     .ticket-item {
         padding: 1.1rem 1rem;
     }

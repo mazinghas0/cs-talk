@@ -79,14 +79,14 @@
 }
 
 .chat-empty-title {
-    font-size: 1rem;
+    font-size: var(--text-base);
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
 }
 
 .chat-empty-desc {
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     color: var(--text-secondary);
     line-height: 1.6;
     margin: 0;
@@ -116,7 +116,7 @@
 }
 
 .chat-header-info h2 {
-    font-size: 1.125rem;
+    font-size: var(--text-lg);
     font-weight: 600;
     margin: 0;
     white-space: nowrap;
@@ -313,7 +313,7 @@
     gap: 0.75rem;
     margin: 0.5rem 0;
     color: var(--text-secondary);
-    font-size: 0.72rem;
+    font-size: var(--text-xs);
     font-weight: 500;
 }
 
@@ -394,22 +394,11 @@
 }
 
 .msg-text {
-    font-size: clamp(0.95rem, 1.1vw, 1.05rem);
+    font-size: var(--text-base);
     line-height: 1.6;
     margin-bottom: 0.25rem;
     word-break: break-word;
     white-space: pre-wrap;
-}
-
-@media (max-width: 1024px) {
-    .msg-text {
-        font-size: 1rem;
-        line-height: 1.65;
-    }
-
-    .msg-time {
-        font-size: 0.75rem;
-    }
 }
 
 .attached-image {
@@ -421,7 +410,7 @@
 }
 
 .msg-time {
-    font-size: 0.7rem;
+    font-size: var(--text-xs);
     color: rgba(255, 255, 255, 0.6);
     display: block;
     text-align: right;
