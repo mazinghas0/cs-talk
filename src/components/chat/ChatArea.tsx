@@ -217,11 +217,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
             const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
             if (!blob) return;
 
-            // Web Share API 지원 시 공유, 아니면 다운로드
-            if (navigator.share && navigator.canShare?.({ files: [new File([blob], 'message.png', { type: 'image/png' })] })) {
-                await navigator.share({
-                    files: [new File([blob], 'message.png', { type: 'image/png' })],
-                });
+            const file = new File([blob], 'message.png', { type: 'image/png' });
+            const isTouchDevice = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+            // 모바일(터치)에서만 공유 시트, PC는 항상 다운로드
+            if (isTouchDevice && navigator.share && navigator.canShare?.({ files: [file] })) {
+                await navigator.share({ files: [file] });
             } else {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
