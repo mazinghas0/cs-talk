@@ -34,8 +34,14 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     const SIDEBAR_MAX = 160;
     const LIST_MIN = 200;
     const LIST_MAX = 520;
-    const [sidebarWidth, setSidebarWidth] = useState(80);
-    const [listWidth, setListWidth] = useState(320);
+    const [sidebarWidth, setSidebarWidth] = useState(() => {
+        const saved = localStorage.getItem('cs_talk_sidebar_width');
+        return saved ? Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, parseInt(saved))) : 80;
+    });
+    const [listWidth, setListWidth] = useState(() => {
+        const saved = localStorage.getItem('cs_talk_list_width');
+        return saved ? Math.min(LIST_MAX, Math.max(LIST_MIN, parseInt(saved))) : 320;
+    });
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const sidebarWidthBeforeCollapse = useRef(80);
 
@@ -49,12 +55,6 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
         document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
         localStorage.setItem('cs_talk_theme', isDarkMode ? 'dark' : 'light');
     }, [isDarkMode]);
-
-    // 초기 테마 적용 (첫 렌더 전)
-    React.useLayoutEffect(() => {
-        const saved = localStorage.getItem('cs_talk_theme') || 'dark';
-        document.documentElement.setAttribute('data-theme', saved);
-    }, []);
 
     type UserStatus = 'online' | 'away' | 'busy';
     const STATUS_CYCLE: UserStatus[] = ['online', 'away', 'busy'];
@@ -79,12 +79,16 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
         dragStartWidth.current = target === 'sidebar' ? sidebarWidth : listWidth;
         setDraggingResizer(target);
 
+        let finalWidth = dragStartWidth.current;
+
         const onMouseMove = (ev: MouseEvent) => {
             const delta = ev.clientX - dragStartX.current;
             if (target === 'sidebar') {
-                setSidebarWidth(Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, dragStartWidth.current + delta)));
+                finalWidth = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, dragStartWidth.current + delta));
+                setSidebarWidth(finalWidth);
             } else {
-                setListWidth(Math.min(LIST_MAX, Math.max(LIST_MIN, dragStartWidth.current + delta)));
+                finalWidth = Math.min(LIST_MAX, Math.max(LIST_MIN, dragStartWidth.current + delta));
+                setListWidth(finalWidth);
             }
         };
 
@@ -94,6 +98,8 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
             document.removeEventListener('mouseup', onMouseUp);
             document.body.style.userSelect = '';
             document.body.style.cursor = '';
+            const key = target === 'sidebar' ? 'cs_talk_sidebar_width' : 'cs_talk_list_width';
+            localStorage.setItem(key, String(finalWidth));
         };
 
         document.body.style.userSelect = 'none';

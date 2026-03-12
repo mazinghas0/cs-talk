@@ -61,7 +61,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
             set({ isLoading: false });
 
-            supabase.auth.onAuthStateChange(async (_event, session) => {
+            supabase.auth.onAuthStateChange(async (event, session) => {
+                // initialize()에서 이미 처리한 초기 세션 이벤트 스킵 (중복 로딩 방지)
+                if (event === 'INITIAL_SESSION') return;
                 set({ session, user: session?.user || null, isLoading: true });
                 if (session?.user) {
                     await get().fetchProfile(session.user.id);

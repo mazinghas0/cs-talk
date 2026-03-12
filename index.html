@@ -7,6 +7,14 @@
     <title>CS-Talk 업무 요청</title>
   </head>
   <body>
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('cs_talk_theme') || 'dark';
+          document.documentElement.setAttribute('data-theme', t);
+        } catch(e) {}
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
