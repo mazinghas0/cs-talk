@@ -94,9 +94,9 @@
 
 /* Header */
 .chat-header {
-    height: 72px;
-    min-height: 72px;
-    padding: 0 1.5rem;
+    height: calc(72px + env(safe-area-inset-top, 0px));
+    min-height: calc(72px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 1.5rem 0 1.5rem;
     border-bottom: 1px solid var(--glass-border);
     display: flex;
     justify-content: space-between;

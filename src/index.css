@@ -26,6 +26,7 @@
   --list-width: 320px;
   --chat-max-width: 1200px;
   --touch-target: 48px;
+  --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --keyboard-height: 0px;
 
