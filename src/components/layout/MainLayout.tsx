@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import './MainLayout.css';
-import { MessageSquare, UserCircle, Shield, Download, Layers, UserPlus, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageSquare, UserCircle, Shield, Download, Layers, UserPlus, Loader2, ChevronLeft, ChevronRight, Sun, Moon } from 'lucide-react';
 import { TicketList } from '../ticket/TicketList';
 import { ChatArea } from '../chat/ChatArea';
 import { ProfileSettings } from '../profile/ProfileSettings';
@@ -36,6 +36,23 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     const [listWidth, setListWidth] = useState(320);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const sidebarWidthBeforeCollapse = useRef(80);
+
+    // 테마 토글
+    const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+        const saved = localStorage.getItem('cs_talk_theme');
+        return saved ? saved === 'dark' : true;
+    });
+
+    React.useEffect(() => {
+        document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+        localStorage.setItem('cs_talk_theme', isDarkMode ? 'dark' : 'light');
+    }, [isDarkMode]);
+
+    // 초기 테마 적용 (첫 렌더 전)
+    React.useLayoutEffect(() => {
+        const saved = localStorage.getItem('cs_talk_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', saved);
+    }, []);
 
     type UserStatus = 'online' | 'away' | 'busy';
     const STATUS_CYCLE: UserStatus[] = ['online', 'away', 'busy'];
@@ -253,6 +270,10 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                         )}
                     </div>
                     <div className="sidebar-bottom">
+                        <div className="sidebar-btn" onClick={() => setIsDarkMode(v => !v)}>
+                            {isDarkMode ? <Sun size={20} color="var(--accent-warning)" /> : <Moon size={20} color="var(--accent-primary)" />}
+                            <span className="sidebar-tooltip">{isDarkMode ? '라이트 모드' : '다크 모드'}</span>
+                        </div>
                         <div className={`sidebar-btn${isSettingsOpen ? ' active' : ''}`} onClick={() => setIsSettingsOpen(true)}>
                             <UserCircle size={30} color="var(--text-primary)" />
                             <span
