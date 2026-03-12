@@ -648,3 +648,101 @@
     border-color: rgba(239, 68, 68, 0.4);
     color: var(--accent-danger);
 }
+
+/* 답장 프리뷰 바 (입력창 위) */
+.reply-preview-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--bg-tertiary);
+    border-top: 1px solid var(--glass-border);
+    border-left: 3px solid var(--accent-primary);
+}
+
+.reply-preview-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.reply-preview-sender {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+    display: block;
+}
+
+.reply-preview-text {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+}
+
+.reply-preview-cancel {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.reply-preview-cancel:hover {
+    color: var(--text-primary);
+}
+
+/* 메시지 버블 내 인용구 */
+.reply-quote {
+    background: rgba(255, 255, 255, 0.07);
+    border-left: 3px solid var(--accent-primary);
+    border-radius: 4px;
+    padding: 5px 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+
+.reply-quote:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="light"] .reply-quote {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .reply-quote:hover {
+    background: rgba(0, 0, 0, 0.09);
+}
+
+.reply-quote-sender {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+    display: block;
+    margin-bottom: 2px;
+}
+
+.reply-quote-text {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 원본 메시지 하이라이트 (스크롤 시) */
+.msg-highlight {
+    animation: msg-flash 1.5s ease;
+}
+
+@keyframes msg-flash {
+    0%, 100% { box-shadow: none; }
+    30% { box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.6); }
+}

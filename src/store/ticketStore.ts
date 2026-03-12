@@ -15,6 +15,7 @@ interface RealtimeMessagePayload {
     image_url: string | null;
     created_at: string;
     thread_parent_id: string | null;
+    customer_name?: string;
 }
 
 interface TicketStore {
@@ -36,7 +37,7 @@ interface TicketStore {
     updateTicket: (id: string, updates: Partial<Ticket>) => Promise<void>;
     requestResolution: (id: string) => Promise<void>;
     fetchMessages: (ticketId: string) => Promise<void>;
-    sendMessage: (ticketId: string, content: string, userId: string, isInternal?: boolean, imageUrl?: string) => Promise<void>;
+    sendMessage: (ticketId: string, content: string, userId: string, isInternal?: boolean, imageUrl?: string, replyToId?: string) => Promise<void>;
     deleteMessage: (messageId: string) => Promise<void>;
     uploadImage: (file: File) => Promise<string>;
     setActiveTab: (tab: TicketStatus) => void;
@@ -214,10 +215,17 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         }
     },
 
-    sendMessage: async (ticketId, content, userId, isInternal = false, imageUrl) => {
+    sendMessage: async (ticketId, content, userId, isInternal = false, imageUrl, replyToId) => {
         const { data, error } = await supabase
             .from('messages')
-            .insert([{ ticket_id: ticketId, user_id: userId, content, is_internal_note: isInternal, image_url: imageUrl }])
+            .insert([{
+                ticket_id: ticketId,
+                user_id: userId,
+                content,
+                is_internal_note: isInternal,
+                image_url: imageUrl,
+                thread_parent_id: replyToId ?? null,
+            }])
             .select(`*, profiles:user_id(full_name, email)`)
             .single();
 

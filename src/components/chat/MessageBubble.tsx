@@ -3,6 +3,12 @@ import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Message } from '../../types/ticket';
 
+interface ReplyPreview {
+    msgId: string;
+    content: string;
+    sender: string;
+}
+
 interface MessageBubbleProps {
     msg: Message;
     isMe: boolean;
@@ -10,11 +16,14 @@ interface MessageBubbleProps {
     isContinued: boolean;
     isLastInGroup: boolean;
     senderName: string;
+    replyPreview?: ReplyPreview | null;
     onMenuOpen: (pos: { x: number; y: number }, msg: Message) => void;
+    onScrollToReply?: (msgId: string) => void;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
-    msg, isMe, isInternalMsg, isContinued, isLastInGroup, senderName, onMenuOpen,
+    msg, isMe, isInternalMsg, isContinued, isLastInGroup, senderName,
+    replyPreview, onMenuOpen, onScrollToReply,
 }) => {
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const touchMoved = useRef(false);
@@ -64,6 +73,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         return (
             <div className="message-wrapper internal">
                 <div className="message-bubble internal-bubble" data-msg-id={msg.id} {...bubbleEvents}>
+                    {replyPreview && (
+                        <div className="reply-quote" onClick={() => onScrollToReply?.(replyPreview.msgId)}>
+                            <span className="reply-quote-sender">{replyPreview.sender}</span>
+                            <p className="reply-quote-text">{replyPreview.content.slice(0, 60)}{replyPreview.content.length > 60 ? '...' : ''}</p>
+                        </div>
+                    )}
                     <p className="msg-text">{msg.content}</p>
                     {msg.image_url && (
                         <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />
@@ -81,6 +96,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 data-msg-id={msg.id}
                 {...bubbleEvents}
             >
+                {replyPreview && (
+                    <div className="reply-quote" onClick={() => onScrollToReply?.(replyPreview.msgId)}>
+                        <span className="reply-quote-sender">{replyPreview.sender}</span>
+                        <p className="reply-quote-text">{replyPreview.content.slice(0, 60)}{replyPreview.content.length > 60 ? '...' : ''}</p>
+                    </div>
+                )}
                 <p className="msg-text">{msg.content}</p>
                 {msg.image_url && (
                     <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />

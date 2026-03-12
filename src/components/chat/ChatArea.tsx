@@ -160,6 +160,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msg: Message } | null>(null);
     const [copyToast, setCopyToast] = useState(false);
     const [errorToast, setErrorToast] = useState('');
+    const [replyTarget, setReplyTarget] = useState<Message | null>(null);
 
     const handleMenuOpen = useCallback((pos: { x: number; y: number }, msg: Message) => {
         setContextMenu({ x: pos.x, y: pos.y, msg });
@@ -250,6 +251,21 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
         }
     }, [contextMenu, deleteMessage]);
 
+    const handleReply = useCallback(() => {
+        if (!contextMenu) return;
+        setReplyTarget(contextMenu.msg);
+        setContextMenu(null);
+        setTimeout(() => textareaRef.current?.focus(), 0);
+    }, [contextMenu]);
+
+    const handleScrollToReply = useCallback((msgId: string) => {
+        const el = document.querySelector<HTMLElement>(`[data-msg-id="${msgId}"]`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // 잠깐 하이라이트 효과
+        el?.classList.add('msg-highlight');
+        setTimeout(() => el?.classList.remove('msg-highlight'), 1500);
+    }, []);
+
     if (!ticket) {
         return (
             <div className="chat-empty">
@@ -288,9 +304,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
 
         setIsSending(true);
         try {
-            await sendMessage(ticket.id, newMessage || ' ', user.id, isInternal, pendingImageUrl || undefined);
+            await sendMessage(ticket.id, newMessage || ' ', user.id, isInternal, pendingImageUrl || undefined, replyTarget?.id);
             setNewMessage('');
             setPendingImageUrl(null);
+            setReplyTarget(null);
             if (textareaRef.current) textareaRef.current.style.height = 'auto';
         } catch (error) {
             console.error('Failed to send message:', error);
@@ -433,7 +450,18 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                                     isContinued={false}
                                     isLastInGroup={true}
                                     senderName={senderName}
+                                    replyPreview={(() => {
+                                        if (!msg.thread_parent_id) return null;
+                                        const parent = messages.find(m => m.id === msg.thread_parent_id);
+                                        if (!parent) return null;
+                                        return {
+                                            msgId: parent.id,
+                                            content: parent.content,
+                                            sender: parent.customer_name || parent.profiles?.full_name || '알 수 없음',
+                                        };
+                                    })()}
                                     onMenuOpen={handleMenuOpen}
+                                    onScrollToReply={handleScrollToReply}
                                 />
                             </React.Fragment>
                         );
@@ -453,7 +481,18 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                                 isContinued={isContinued}
                                 isLastInGroup={isLastInGroup}
                                 senderName={senderName}
+                                replyPreview={(() => {
+                                    if (!msg.thread_parent_id) return null;
+                                    const parent = messages.find(m => m.id === msg.thread_parent_id);
+                                    if (!parent) return null;
+                                    return {
+                                        msgId: parent.id,
+                                        content: parent.content,
+                                        sender: parent.customer_name || parent.profiles?.full_name || '알 수 없음',
+                                    };
+                                })()}
                                 onMenuOpen={handleMenuOpen}
+                                onScrollToReply={handleScrollToReply}
                             />
                         </React.Fragment>
                     );
@@ -469,6 +508,21 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                 style={{ display: 'none' }}
                 onChange={handleImageSelect}
             />
+            {replyTarget && (
+                <div className="reply-preview-bar">
+                    <div className="reply-preview-content">
+                        <span className="reply-preview-sender">
+                            {replyTarget.customer_name || replyTarget.profiles?.full_name || '알 수 없음'}에게 답장
+                        </span>
+                        <p className="reply-preview-text">
+                            {replyTarget.content.slice(0, 60)}{replyTarget.content.length > 60 ? '...' : ''}
+                        </p>
+                    </div>
+                    <button className="reply-preview-cancel" onClick={() => setReplyTarget(null)}>
+                        <X size={14} />
+                    </button>
+                </div>
+            )}
             {pendingImageUrl && (
                 <div className="pending-image-preview">
                     <img src={pendingImageUrl} alt="첨부 예정" />
@@ -582,6 +636,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                     onCopy={handleCopy}
                     onShare={handleShare}
                     onCapture={handleCapture}
+                    onReply={handleReply}
                     onDelete={handleDeleteMessage}
                 />
             )}
