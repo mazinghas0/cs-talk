@@ -311,7 +311,22 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                     </button>
                 )}
                 <div className="message-wrapper user-req">
-                    <div className="message-bubble req-bubble">
+                    <div
+                        className="message-bubble req-bubble"
+                        onContextMenu={(e) => {
+                            e.preventDefault();
+                            handleMenuOpen({ x: e.clientX, y: e.clientY }, {
+                                id: `ticket-desc-${ticket.id}`,
+                                ticket_id: ticket.id,
+                                user_id: ticket.requesting_user_id,
+                                content: ticket.description,
+                                is_internal_note: false,
+                                is_resolution: false,
+                                image_url: ticket.image_url,
+                                created_at: ticket.created_at,
+                            });
+                        }}
+                    >
                         <p className="msg-text">{ticket.description}</p>
                         {ticket.image_url && (
                             <img src={ticket.image_url} alt="첨부 이미지" className="attached-image" />
