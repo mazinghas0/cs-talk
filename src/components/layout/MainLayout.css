@@ -171,7 +171,69 @@
     padding: 1rem 0;
     z-index: 10;
     flex-shrink: 0;
-    overflow: hidden;
+    overflow: visible;
+}
+
+/* ===================================
+   SIDEBAR ICON BUTTON + TOOLTIP
+   =================================== */
+.sidebar-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.sidebar-btn:hover {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.sidebar-btn .sidebar-tooltip {
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    font-size: 0.78rem;
+    white-space: nowrap;
+    padding: 5px 10px;
+    border-radius: 6px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.sidebar-btn .sidebar-tooltip::before {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: var(--glass-border);
+}
+
+.sidebar-btn .sidebar-tooltip::after {
+    content: '';
+    position: absolute;
+    right: calc(100% - 1px);
+    top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: var(--bg-tertiary);
+}
+
+.sidebar-btn:hover .sidebar-tooltip {
+    opacity: 1;
 }
 
 .sidebar-top {

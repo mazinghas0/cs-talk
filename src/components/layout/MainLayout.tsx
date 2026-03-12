@@ -209,38 +209,27 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                         <WorkspaceSwitcher />
                         <div className="divider" style={{ width: '20px', height: '1px', background: 'var(--glass-border)', margin: '0.5rem 0' }} />
                         {isAdmin && (
-                            <Shield
-                                size={22}
-                                color="var(--accent-primary)"
-                                style={{ cursor: 'pointer' }}
-                                aria-label="사용자 관리"
-                                onClick={() => setIsAdminOpen(true)}
-                            />
+                            <div className="sidebar-btn" onClick={() => setIsAdminOpen(true)}>
+                                <Shield size={22} color="var(--accent-primary)" />
+                                <span className="sidebar-tooltip">사용자 관리</span>
+                            </div>
                         )}
-                        <UserPlus
-                            size={22}
-                            color="var(--text-secondary)"
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => setIsInviteOpen(true)}
-                            aria-label="팀원 초대"
-                        />
+                        <div className="sidebar-btn" onClick={() => setIsInviteOpen(true)}>
+                            <UserPlus size={22} color="var(--text-secondary)" />
+                            <span className="sidebar-tooltip">팀원 초대</span>
+                        </div>
                         {installPrompt && (
-                            <Download
-                                size={22}
-                                color="var(--text-secondary)"
-                                style={{ cursor: 'pointer' }}
-                                onClick={handleInstallClick}
-                                aria-label="앱 설치하기"
-                            />
+                            <div className="sidebar-btn" onClick={handleInstallClick}>
+                                <Download size={22} color="var(--text-secondary)" />
+                                <span className="sidebar-tooltip">앱 설치하기</span>
+                            </div>
                         )}
                     </div>
                     <div className="sidebar-bottom">
-                        <UserCircle
-                            size={30}
-                            color="var(--text-primary)"
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => setIsSettingsOpen(true)}
-                        />
+                        <div className="sidebar-btn" onClick={() => setIsSettingsOpen(true)}>
+                            <UserCircle size={30} color="var(--text-primary)" />
+                            <span className="sidebar-tooltip">프로필 설정</span>
+                        </div>
                     </div>
                 </nav>
             )}
