@@ -746,3 +746,56 @@
     0%, 100% { box-shadow: none; }
     30% { box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.6); }
 }
+
+/* 이모지 리액션 뱃지 */
+.reaction-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 0 2px;
+}
+
+.reaction-row-me {
+    justify-content: flex-end;
+}
+
+.reaction-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 2px 7px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: background 0.1s, transform 0.1s;
+    line-height: 1.4;
+}
+
+.reaction-badge:hover {
+    background: rgba(255, 255, 255, 0.14);
+    transform: scale(1.06);
+}
+
+.reaction-badge.mine {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.45);
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .reaction-badge {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .reaction-badge:hover {
+    background: rgba(0, 0, 0, 0.09);
+}
+
+[data-theme="light"] .reaction-badge.mine {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: rgba(99, 102, 241, 0.35);
+}

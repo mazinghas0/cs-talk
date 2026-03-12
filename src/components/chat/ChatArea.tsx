@@ -18,7 +18,7 @@ interface ChatAreaProps {
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
-    const { tickets, selectedTicketId, messages, sendMessage, deleteMessage, updateTicketStatus, deleteTicket, requestResolution, updateTicket } = useTicketStore();
+    const { tickets, selectedTicketId, messages, reactions, toggleReaction, sendMessage, deleteMessage, updateTicketStatus, deleteTicket, requestResolution, updateTicket } = useTicketStore();
     const { user } = useAuthStore();
     const ticket = tickets.find(t => t.id === selectedTicketId);
 
@@ -258,6 +258,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
         setTimeout(() => textareaRef.current?.focus(), 0);
     }, [contextMenu]);
 
+    const handleReact = useCallback(async (emoji: string) => {
+        if (!contextMenu) return;
+        await toggleReaction(contextMenu.msg.id, emoji);
+    }, [contextMenu, toggleReaction]);
+
     const handleScrollToReply = useCallback((msgId: string) => {
         const el = document.querySelector<HTMLElement>(`[data-msg-id="${msgId}"]`);
         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -460,6 +465,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                                             sender: parent.customer_name || parent.profiles?.full_name || '알 수 없음',
                                         };
                                     })()}
+                                    reactions={reactions[msg.id]}
+                                    currentUserId={user?.id}
+                                    onToggleReaction={toggleReaction}
                                     onMenuOpen={handleMenuOpen}
                                     onScrollToReply={handleScrollToReply}
                                 />
@@ -491,6 +499,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                                         sender: parent.customer_name || parent.profiles?.full_name || '알 수 없음',
                                     };
                                 })()}
+                                reactions={reactions[msg.id]}
+                                currentUserId={user?.id}
+                                onToggleReaction={toggleReaction}
                                 onMenuOpen={handleMenuOpen}
                                 onScrollToReply={handleScrollToReply}
                             />
@@ -632,11 +643,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                     y={contextMenu.y}
                     msg={contextMenu.msg}
                     isMe={contextMenu.msg.user_id === user?.id}
+                    myReactions={(reactions[contextMenu.msg.id] ?? [])
+                        .filter(r => r.user_id === user?.id)
+                        .map(r => r.emoji)}
                     onClose={handleMenuClose}
                     onCopy={handleCopy}
                     onShare={handleShare}
                     onCapture={handleCapture}
                     onReply={handleReply}
+                    onReact={handleReact}
                     onDelete={handleDeleteMessage}
                 />
             )}

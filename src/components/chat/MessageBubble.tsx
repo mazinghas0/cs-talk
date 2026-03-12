@@ -1,7 +1,7 @@
 import React, { useRef, useCallback } from 'react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Message } from '../../types/ticket';
+import { Message, MessageReaction } from '../../types/ticket';
 
 interface ReplyPreview {
     msgId: string;
@@ -17,13 +17,16 @@ interface MessageBubbleProps {
     isLastInGroup: boolean;
     senderName: string;
     replyPreview?: ReplyPreview | null;
+    reactions?: MessageReaction[];
+    currentUserId?: string | null;
+    onToggleReaction?: (messageId: string, emoji: string) => void;
     onMenuOpen: (pos: { x: number; y: number }, msg: Message) => void;
     onScrollToReply?: (msgId: string) => void;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
     msg, isMe, isInternalMsg, isContinued, isLastInGroup, senderName,
-    replyPreview, onMenuOpen, onScrollToReply,
+    replyPreview, reactions, currentUserId, onToggleReaction, onMenuOpen, onScrollToReply,
 }) => {
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const touchMoved = useRef(false);
@@ -62,6 +65,36 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         touchStartPos.current = null;
     }, []);
 
+    // 이모지별 카운트 및 내가 누른 여부 집계
+    const reactionGroups = React.useMemo(() => {
+        if (!reactions || reactions.length === 0) return [];
+        const map = new Map<string, { count: number; isMine: boolean }>();
+        for (const r of reactions) {
+            const existing = map.get(r.emoji);
+            if (existing) {
+                existing.count += 1;
+                if (r.user_id === currentUserId) existing.isMine = true;
+            } else {
+                map.set(r.emoji, { count: 1, isMine: r.user_id === currentUserId });
+            }
+        }
+        return Array.from(map.entries()).map(([emoji, { count, isMine }]) => ({ emoji, count, isMine }));
+    }, [reactions, currentUserId]);
+
+    const reactionBadges = reactionGroups.length > 0 ? (
+        <div className={`reaction-row${isMe ? ' reaction-row-me' : ''}`}>
+            {reactionGroups.map(({ emoji, count, isMine }) => (
+                <button
+                    key={emoji}
+                    className={`reaction-badge${isMine ? ' mine' : ''}`}
+                    onClick={() => onToggleReaction?.(msg.id, emoji)}
+                >
+                    {emoji} {count}
+                </button>
+            ))}
+        </div>
+    ) : null;
+
     const bubbleEvents = {
         onContextMenu: handleContextMenu,
         onTouchStart: handleTouchStart,
@@ -85,6 +118,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     )}
                     <span className="msg-time">{senderName} · {format(msgDate, 'a h:mm', { locale: ko })}</span>
                 </div>
+                {reactionBadges}
             </div>
         );
     }
@@ -113,6 +147,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     </span>
                 )}
             </div>
+            {reactionBadges}
         </div>
     );
 };
