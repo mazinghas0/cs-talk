@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import './MainLayout.css';
 import { MessageSquare, UserCircle, Shield, Download, Layers, UserPlus, Loader2 } from 'lucide-react';
 import { TicketList } from '../ticket/TicketList';
@@ -26,6 +26,46 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     const [isMobile, setIsMobile] = React.useState(
         () => window.matchMedia('(max-width: 1024px)').matches
     );
+
+    // 패널 너비 상태 (데스크탑 전용)
+    const SIDEBAR_MIN = 60;
+    const SIDEBAR_MAX = 160;
+    const LIST_MIN = 200;
+    const LIST_MAX = 520;
+    const [sidebarWidth, setSidebarWidth] = useState(80);
+    const [listWidth, setListWidth] = useState(320);
+    const [draggingResizer, setDraggingResizer] = useState<'sidebar' | 'list' | null>(null);
+    const dragStartX = useRef(0);
+    const dragStartWidth = useRef(0);
+
+    const onResizerMouseDown = useCallback((e: React.MouseEvent, target: 'sidebar' | 'list') => {
+        e.preventDefault();
+        dragStartX.current = e.clientX;
+        dragStartWidth.current = target === 'sidebar' ? sidebarWidth : listWidth;
+        setDraggingResizer(target);
+
+        const onMouseMove = (ev: MouseEvent) => {
+            const delta = ev.clientX - dragStartX.current;
+            if (target === 'sidebar') {
+                setSidebarWidth(Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, dragStartWidth.current + delta)));
+            } else {
+                setListWidth(Math.min(LIST_MAX, Math.max(LIST_MIN, dragStartWidth.current + delta)));
+            }
+        };
+
+        const onMouseUp = () => {
+            setDraggingResizer(null);
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+        };
+
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'col-resize';
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    }, [sidebarWidth, listWidth]);
 
     React.useEffect(() => {
         const mq = window.matchMedia('(max-width: 1024px)');
@@ -162,7 +202,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
 
             {/* 1. 사이드바 (데스크톱 전용) */}
             {!isMobile && (
-                <nav className="pane-sidebar">
+                <nav className="pane-sidebar" style={{ width: sidebarWidth }}>
                     <div className="sidebar-top">
                         <div className="sidebar-logo">CS</div>
                         <div className="divider" style={{ width: '20px', height: '1px', background: 'var(--glass-border)', margin: '0.5rem 0' }} />
@@ -228,11 +268,27 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                 </div>
             )}
 
+            {/* 사이드바 ↔ 티켓 목록 리사이저 */}
+            {!isMobile && (
+                <div
+                    className={`pane-resizer${draggingResizer === 'sidebar' ? ' dragging' : ''}`}
+                    onMouseDown={(e) => onResizerMouseDown(e, 'sidebar')}
+                />
+            )}
+
             {/* 2. 티켓 목록 */}
             {showList && (
-                <aside className="pane-list">
+                <aside className="pane-list" style={!isMobile ? { width: listWidth } : undefined}>
                     <TicketList />
                 </aside>
+            )}
+
+            {/* 티켓 목록 ↔ 채팅 리사이저 */}
+            {!isMobile && (
+                <div
+                    className={`pane-resizer${draggingResizer === 'list' ? ' dragging' : ''}`}
+                    onMouseDown={(e) => onResizerMouseDown(e, 'list')}
+                />
             )}
 
             {/* 3. 채팅 영역 */}
