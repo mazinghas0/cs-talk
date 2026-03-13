@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import './MainLayout.css';
-import { MessageSquare, UserCircle, Shield, Download, Layers, UserPlus, Loader2, ChevronLeft, ChevronRight, Sun, Moon, HelpCircle } from 'lucide-react';
+import { MessageSquare, UserCircle, Shield, Download, Layers, UserPlus, Loader2, ChevronLeft, ChevronRight, Sun, Moon, HelpCircle, BarChart2 } from 'lucide-react';
 import { TicketList } from '../ticket/TicketList';
 import { ChatArea } from '../chat/ChatArea';
 import { ProfileSettings } from '../profile/ProfileSettings';
@@ -10,6 +10,7 @@ import { ShortcutsModal } from './ShortcutsModal';
 import { useTicketStore } from '../../store/ticketStore';
 import { useAuthStore } from '../../store/authStore';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
+import { DashboardPanel } from '../dashboard/DashboardPanel';
 
 export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
@@ -17,13 +18,14 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     const [isWorkspaceOpen, setIsWorkspaceOpen] = React.useState(false);
     const [isInviteOpen, setIsInviteOpen] = React.useState(false);
     const [isShortcutsOpen, setIsShortcutsOpen] = React.useState(false);
+    const [isDashboardOpen, setIsDashboardOpen] = React.useState(false);
     const [installPrompt, setInstallPrompt] = React.useState<Event | null>(null);
     const [joinMode, setJoinMode] = useState<'select' | 'create' | 'code'>('select');
     const [joinCode, setJoinCode] = useState('');
     const [joinError, setJoinError] = useState('');
     const [isJoining, setIsJoining] = useState(false);
     const { selectedTicketId, setSelectedTicketId, fetchTickets } = useTicketStore();
-    const { isAdmin, workspaces, currentWorkspace, isLoading, joinWorkspaceByCode } = useAuthStore();
+    const { isAdmin, workspaces, currentWorkspace, isLoading, joinWorkspaceByCode, currentWorkspaceRole } = useAuthStore();
 
     const [isMobile, setIsMobile] = React.useState(
         () => window.matchMedia('(max-width: 1024px)').matches
@@ -275,6 +277,12 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                                 <span className="sidebar-tooltip">사용자 관리</span>
                             </div>
                         )}
+                        {currentWorkspaceRole === 'leader' && (
+                            <div className={`sidebar-btn${isDashboardOpen ? ' active' : ''}`} onClick={() => setIsDashboardOpen(true)}>
+                                <BarChart2 size={22} color="var(--text-secondary)" />
+                                <span className="sidebar-tooltip">워크스페이스 현황</span>
+                            </div>
+                        )}
                         <div className={`sidebar-btn${isInviteOpen ? ' active' : ''}`} onClick={() => setIsInviteOpen(true)}>
                             <UserPlus size={22} color="var(--text-secondary)" />
                             <span className="sidebar-tooltip">팀원 초대</span>
@@ -315,6 +323,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
             <AdminPanel isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} />
             <WorkspaceInviteModal isOpen={isInviteOpen} onClose={() => setIsInviteOpen(false)} />
             <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
+            <DashboardPanel isOpen={isDashboardOpen} onClose={() => setIsDashboardOpen(false)} />
 
             {/* 모바일 워크스페이스 전환 시트 */}
             {isMobile && isWorkspaceOpen && (
@@ -391,6 +400,12 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                         <div className="nav-item" onClick={handleInstallClick}>
                             <Download size={22} />
                             <span>앱 설치</span>
+                        </div>
+                    )}
+                    {currentWorkspaceRole === 'leader' && (
+                        <div className="nav-item" onClick={() => setIsDashboardOpen(true)}>
+                            <BarChart2 size={22} />
+                            <span>현황</span>
                         </div>
                     )}
                     {isAdmin && (
