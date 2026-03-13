@@ -3,7 +3,7 @@ import './TicketList.css';
 import './TicketModal.css';
 import { useTicketStore } from '../../store/ticketStore';
 import { TicketTabs } from './TicketTabs';
-import { Clock, Plus, X, RefreshCw, Search, Check, MoreVertical, Pencil, Trash2, Filter } from 'lucide-react';
+import { Clock, Plus, X, RefreshCw, Search, Check, MoreVertical, Pencil, Trash2, Filter, RotateCcw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useAuthStore, WorkspaceMemberProfile } from '../../store/authStore';
@@ -17,12 +17,14 @@ interface SwipeableTicketItemProps {
     canSwipe: boolean;
     canEdit: boolean;
     canDelete: boolean;
+    canRestore: boolean;
     onEdit: (ticket: Ticket) => void;
     onDelete: (id: string) => void;
+    onRestore: (id: string) => void;
     workspaceMembers: WorkspaceMemberProfile[];
 }
 
-const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSelected, unreadCount, onSelect, canSwipe, canEdit, canDelete, onEdit, onDelete, workspaceMembers }) => {
+const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSelected, unreadCount, onSelect, canSwipe, canEdit, canDelete, canRestore, onEdit, onDelete, onRestore, workspaceMembers }) => {
     const { updateTicketStatus } = useTicketStore();
     const [swipeX, setSwipeX] = useState(0);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -131,8 +133,8 @@ const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSel
                     {unreadCount > 0 && (
                         <span className="unread-badge">{unreadCount}</span>
                     )}
-                    {/* 더보기 버튼: 수정/삭제 중 하나라도 권한 있을 때만 표시 */}
-                    {(canEdit || canDelete) && (
+                    {/* 더보기 버튼: 수정/삭제/원복 중 하나라도 권한 있을 때만 표시 */}
+                    {(canEdit || canDelete || canRestore) && (
                         <div className="ticket-menu-wrap" ref={menuRef}>
                             <button
                                 className="ticket-menu-btn"
@@ -156,6 +158,11 @@ const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSel
                                             {canEdit && (
                                                 <button className="ticket-dropdown-item" onClick={(e) => { e.stopPropagation(); onEdit(ticket); setMenuOpen(false); }}>
                                                     <Pencil size={13} /> 수정
+                                                </button>
+                                            )}
+                                            {canRestore && (
+                                                <button className="ticket-dropdown-item" onClick={(e) => { e.stopPropagation(); onRestore(ticket.id); setMenuOpen(false); }}>
+                                                    <RotateCcw size={13} /> 진행중으로 되돌리기
                                                 </button>
                                             )}
                                             {canDelete && (
@@ -194,7 +201,7 @@ const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSel
 };
 
 export const TicketList: React.FC = () => {
-    const { tickets, activeTab, selectedTicketId, setSelectedTicketId, fetchTickets, createTicket, deleteTicket, updateTicket, isLoadingData, unreadCounts } = useTicketStore();
+    const { tickets, activeTab, selectedTicketId, setSelectedTicketId, fetchTickets, createTicket, deleteTicket, updateTicket, updateTicketStatus, isLoadingData, unreadCounts } = useTicketStore();
     const { user, currentWorkspace, currentWorkspaceRole, workspaceMembers } = useAuthStore();
 
     // 생성 모달 state
@@ -310,6 +317,15 @@ export const TicketList: React.FC = () => {
         } catch (err) {
             console.error('Delete Ticket Error:', err);
             alert('삭제 실패. 다시 시도해주세요.');
+        }
+    };
+
+    const handleRestore = async (id: string) => {
+        try {
+            await updateTicketStatus(id, 'in_progress');
+        } catch (err) {
+            console.error('Restore Ticket Error:', err);
+            alert('원복 실패. 다시 시도해주세요.');
         }
     };
 
@@ -479,10 +495,12 @@ export const TicketList: React.FC = () => {
                                 unreadCount={unreadCounts[ticket.id] ?? 0}
                                 onSelect={() => setSelectedTicketId(ticket.id)}
                                 canSwipe={activeTab === 'in_progress'}
-                                canEdit={isCreator}
+                                canEdit={isCreator && activeTab === 'in_progress'}
                                 canDelete={isCreator || isLeader}
+                                canRestore={(isCreator || isLeader) && activeTab === 'resolved'}
                                 onEdit={handleEditOpen}
                                 onDelete={handleDelete}
+                                onRestore={handleRestore}
                                 workspaceMembers={workspaceMembers}
                             />
                         );
