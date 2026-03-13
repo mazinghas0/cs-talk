@@ -241,16 +241,21 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
         if (error || !data) return;
 
-        const members: WorkspaceMemberProfile[] = (data as {
+        type RawMember = {
             user_id: string;
             role: string;
-            profiles: { full_name: string | null; email: string } | null;
-        }[]).map(m => ({
-            user_id: m.user_id,
-            role: m.role as 'leader' | 'member',
-            full_name: m.profiles?.full_name ?? null,
-            email: m.profiles?.email ?? '',
-        }));
+            profiles: { full_name: string | null; email: string }[] | { full_name: string | null; email: string } | null;
+        };
+
+        const members: WorkspaceMemberProfile[] = (data as unknown as RawMember[]).map(m => {
+            const profile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
+            return {
+                user_id: m.user_id,
+                role: m.role as 'leader' | 'member',
+                full_name: profile?.full_name ?? null,
+                email: profile?.email ?? '',
+            };
+        });
 
         set({ workspaceMembers: members });
     },
