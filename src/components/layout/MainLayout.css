@@ -349,6 +349,7 @@
     z-index: 9;
     flex-shrink: 0;
     overflow: hidden;
+    min-height: 0;
 }
 
 /* ===================================
