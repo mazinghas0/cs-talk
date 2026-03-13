@@ -6,9 +6,9 @@
 
 .bookmark-panel {
     position: fixed;
-    top: 0;
+    top: env(safe-area-inset-top, 0px);
     right: 0;
-    height: 100%;
+    height: calc(100% - env(safe-area-inset-top, 0px));
     width: 320px;
     max-width: 90vw;
     background: var(--bg-secondary, #1e1e2e);

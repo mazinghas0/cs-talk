@@ -8,6 +8,11 @@ T04. 티켓 생성 → 목록 노출
 T05. 채팅 메시지 전송 → 즉시 표시
 T06. 고객 PIN 인증 페이지 렌더링
 T07. 실시간 채팅 — PC ↔ 모바일 교차 수신
+T08. 북마크 추가 → 패널 노출 → 클릭 시 스크롤 이동
+
+실행 방법:
+  1. tests/.env.test 파일 생성 (tests/.env.test.example 참고)
+  2. python tests/test_realtime.py
 """
 import time
 import sys
@@ -19,6 +24,19 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='repla
 from playwright.sync_api import sync_playwright, Page
 
 BASE_URL = "http://localhost:5173"
+
+# ── 환경변수 로딩 (.env.test 파일 우선, 시스템 환경변수 폴백) ──
+def _load_env_test():
+    env_path = os.path.join(os.path.dirname(__file__), ".env.test")
+    if os.path.exists(env_path):
+        with open(env_path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, _, val = line.partition("=")
+                    os.environ.setdefault(key.strip(), val.strip())
+
+_load_env_test()
 
 
 def _is_port_open(port: int) -> bool:
@@ -48,9 +66,9 @@ def start_dev_server():
     print("  [경고] 개발 서버 기동 타임아웃")
     return proc
 
-# 테스트 계정 (Supabase 실계정 — 커밋 금지)
-TEST_EMAIL = "mazinghas0@gmail.com"
-TEST_PASSWORD = ""  # 로컬 실행 시 직접 입력
+# 테스트 계정 — tests/.env.test 에서 로딩 (커밋 금지)
+TEST_EMAIL = os.environ.get("TEST_EMAIL", "mazinghas0@gmail.com")
+TEST_PASSWORD = os.environ.get("TEST_PASSWORD", "")
 
 
 # ──────────────────────────────────────────────
@@ -348,6 +366,78 @@ def test_realtime_two_contexts(playwright) -> bool:
 
 
 # ──────────────────────────────────────────────
+# T08. 북마크 추가 → 패널 노출 → 클릭 시 스크롤 이동
+# ──────────────────────────────────────────────
+
+@requires_auth
+def test_bookmark(page: Page) -> bool:
+    print("\n[T08] 북마크 기능")
+
+    if not login(page, "T08"):
+        return result("북마크 플로우", False)
+
+    if page.locator(".empty-workspace-screen").is_visible():
+        print("  [SKIP] 워크스페이스 없음")
+        return True
+
+    first_ticket = page.locator(".ticket-item").first
+    if not first_ticket.is_visible():
+        print("  [SKIP] 티켓 없음")
+        return True
+
+    first_ticket.click()
+    page.wait_for_load_state("networkidle")
+
+    # 메시지가 없으면 하나 전송
+    if not page.locator(".message-bubble").first.is_visible():
+        page.locator("textarea").fill(f"북마크 테스트용 메시지 {int(time.time())}")
+        page.keyboard.press("Enter")
+        page.wait_for_selector(".message-bubble", timeout=5000)
+
+    # 첫 번째 메시지 우클릭 → 컨텍스트 메뉴
+    first_msg = page.locator(".message-bubble").first
+    first_msg.click(button="right")
+
+    try:
+        page.wait_for_selector(".msg-ctx-menu", timeout=3000)
+    except Exception:
+        screenshot(page, "T08_ctx_menu_not_shown")
+        return result("컨텍스트 메뉴 열림", False)
+
+    # 북마크 버튼 클릭
+    bookmark_btn = page.locator(".msg-ctx-item:has-text('북마크')")
+    if not bookmark_btn.is_visible():
+        screenshot(page, "T08_bookmark_btn_not_found")
+        return result("북마크 메뉴 항목 존재", False)
+
+    bookmark_btn.click()
+    time.sleep(1)
+
+    # 헤더 북마크 아이콘 → 패널 열기
+    page.locator(".header-bookmark-btn").click()
+
+    try:
+        page.wait_for_selector(".bookmark-panel.open", timeout=3000)
+    except Exception:
+        screenshot(page, "T08_panel_not_opened")
+        return result("북마크 패널 열림", False)
+
+    # 패널에 북마크 항목 노출 확인
+    panel_has_item = page.locator(".bookmark-item").first.is_visible()
+    if not result("북마크 패널에 항목 노출", panel_has_item):
+        screenshot(page, "T08_panel_empty")
+        return False
+
+    # 이동 버튼 클릭 → 패널 닫힘 확인
+    page.locator(".bookmark-action-go").first.click()
+    time.sleep(1)
+
+    panel_closed = not page.locator(".bookmark-panel.open").is_visible()
+    screenshot(page, "T08_after_goto")
+    return result("이동 버튼 → 패널 닫힘", panel_closed)
+
+
+# ──────────────────────────────────────────────
 # 실행
 # ──────────────────────────────────────────────
 
@@ -375,15 +465,17 @@ def main():
             results["T02_login"] = test_login(page)
             results["T04_create_ticket"] = test_create_ticket(page)
             results["T05_send_message"] = test_send_message(page)
+            results["T08_bookmark"] = test_bookmark(page)
             results["T03_logout"] = test_logout(page)
 
             browser.close()
         else:
-            print("\n[T02~T05] TEST_PASSWORD 미설정 — 인증 필요 테스트 전체 SKIP")
+            print("\n[T02~T05, T08] TEST_PASSWORD 미설정 — 인증 필요 테스트 전체 SKIP")
             results["T02_login"] = True
             results["T03_logout"] = True
             results["T04_create_ticket"] = True
             results["T05_send_message"] = True
+            results["T08_bookmark"] = True
 
         # 실시간 테스트 (두 브라우저)
         results["T07_realtime"] = test_realtime_two_contexts(p)

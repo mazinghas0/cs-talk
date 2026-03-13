@@ -62,8 +62,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             set({ isLoading: false });
 
             supabase.auth.onAuthStateChange(async (event, session) => {
-                // initialize()에서 이미 처리한 초기 세션 이벤트 스킵 (중복 로딩 방지)
+                // 초기 세션 이벤트 스킵 (initialize()에서 이미 처리)
                 if (event === 'INITIAL_SESSION') return;
+
+                // 토큰 갱신(TOKEN_REFRESHED)은 같은 유저 — isLoading 없이 조용히 처리
+                if (event === 'TOKEN_REFRESHED') {
+                    set({ session, user: session?.user || null });
+                    return;
+                }
+
+                // 실제 유저 변경(SIGNED_IN, SIGNED_OUT)만 로딩 표시
                 set({ session, user: session?.user || null, isLoading: true });
                 if (session?.user) {
                     await get().fetchProfile(session.user.id);

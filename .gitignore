@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# 테스트 계정 정보 (커밋 금지)
+tests/.env.test
+tests/screenshots/
