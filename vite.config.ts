@@ -11,6 +11,7 @@ export default defineConfig({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
+        cleanupOutdatedCaches: true,
         additionalManifestEntries: [
           { url: '/', revision: `${Date.now()}` }
         ],
