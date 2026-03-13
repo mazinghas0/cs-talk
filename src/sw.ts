@@ -17,12 +17,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('push', (event) => {
     if (!event.data) return;
 
-    const data = event.data.json() as {
-        title: string;
-        body: string;
-        tag?: string;
-        url?: string;
-    };
+    let data: { title: string; body: string; tag?: string; url?: string };
+    try {
+        data = event.data.json();
+    } catch {
+        data = { title: '새 알림', body: event.data.text() };
+    }
 
     event.waitUntil(
         // 앱이 포그라운드(보이는 상태)면 Phase1이 처리 → SW 알림 스킵
