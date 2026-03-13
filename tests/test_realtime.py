@@ -179,8 +179,8 @@ def test_logout(page: Page) -> bool:
     if not login(page, "T03"):
         return result("로그인 후 로그아웃", False)
 
-    # 사이드바 하단 UserCircle 클릭 → 프로필 설정 모달
-    page.locator(".sidebar-bottom").click()
+    # 사이드바 하단 UserCircle 클릭 → 프로필 설정 모달 (마지막 sidebar-btn)
+    page.locator(".sidebar-bottom .sidebar-btn").last.click()
     try:
         page.wait_for_selector(".profile-settings-modal", timeout=5000)
     except Exception:
@@ -399,7 +399,7 @@ def test_bookmark(page: Page) -> bool:
     first_msg.click(button="right")
 
     try:
-        page.wait_for_selector(".msg-ctx-menu", timeout=3000)
+        page.wait_for_selector(".msg-context-menu", timeout=3000)
     except Exception:
         screenshot(page, "T08_ctx_menu_not_shown")
         return result("컨텍스트 메뉴 열림", False)
@@ -413,8 +413,8 @@ def test_bookmark(page: Page) -> bool:
     bookmark_btn.click()
     time.sleep(1)
 
-    # 헤더 북마크 아이콘 → 패널 열기
-    page.locator(".header-bookmark-btn").click()
+    # 헤더 북마크 아이콘 → 패널 열기 (title 속성으로 특정)
+    page.locator(".icon-btn-header[title='북마크']").click()
 
     try:
         page.wait_for_selector(".bookmark-panel.open", timeout=3000)
