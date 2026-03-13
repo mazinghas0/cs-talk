@@ -21,6 +21,8 @@ interface AuthStore {
     allProfiles: Profile[];
     workspaces: Workspace[];
     currentWorkspace: Workspace | null;
+    currentWorkspaceRole: 'leader' | 'member' | null;
+    workspaceRoles: Record<string, 'leader' | 'member'>;
 
     initialize: () => void;
     setUser: (user: User | null) => void;
@@ -42,12 +44,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     session: null,
     profile: null,
     isLoading: true,
-    // isAdmin을 명시적 state 필드로 관리
-    // (Zustand getter 패턴은 set() 호출 시 값이 굳어버리는 버그가 있음)
     isAdmin: false,
     allProfiles: [],
     workspaces: [],
     currentWorkspace: null,
+    currentWorkspaceRole: null,
+    workspaceRoles: {},
 
     initialize: async () => {
         try {
@@ -186,21 +188,21 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // 멤버로 속한 워크스페이스 ID 조회
-        // (DB 트리거로 owner도 자동으로 workspace_members에 등록됨)
         const { data: memberData } = await supabase
             .from('workspace_members')
-            .select('workspace_id')
+            .select('workspace_id, role')
             .eq('user_id', user.id);
 
         const workspaceIds = memberData?.map(m => m.workspace_id) || [];
 
         if (workspaceIds.length === 0) {
-            set({ workspaces: [] });
+            set({ workspaces: [], workspaceRoles: {}, currentWorkspaceRole: null });
             return;
         }
 
-        // 문자열 조합 방식 제거 → 안전한 .in() 방식 사용
+        const roles: Record<string, 'leader' | 'member'> = {};
+        memberData?.forEach(m => { roles[m.workspace_id] = m.role as 'leader' | 'member'; });
+
         const { data, error } = await supabase
             .from('workspaces')
             .select('*')
@@ -208,14 +210,25 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             .order('created_at', { ascending: false });
 
         if (!error && data) {
-            set({ workspaces: data as Workspace[] });
-            if (data.length > 0 && !get().currentWorkspace) {
-                set({ currentWorkspace: data[0] as Workspace });
+            const currentWs = get().currentWorkspace ?? (data[0] as Workspace);
+            set({
+                workspaces: data as Workspace[],
+                workspaceRoles: roles,
+                currentWorkspaceRole: roles[currentWs.id] ?? null,
+            });
+            if (!get().currentWorkspace) {
+                set({ currentWorkspace: currentWs });
             }
         }
     },
 
-    setCurrentWorkspace: (workspace) => set({ currentWorkspace: workspace }),
+    setCurrentWorkspace: (workspace) => {
+        const roles = get().workspaceRoles;
+        set({
+            currentWorkspace: workspace,
+            currentWorkspaceRole: workspace ? (roles[workspace.id] ?? null) : null,
+        });
+    },
 
     generateInviteCode: async (workspaceId) => {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

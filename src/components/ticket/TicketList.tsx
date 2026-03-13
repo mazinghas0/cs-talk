@@ -15,11 +15,13 @@ interface SwipeableTicketItemProps {
     unreadCount: number;
     onSelect: () => void;
     canSwipe: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
     onEdit: (ticket: Ticket) => void;
     onDelete: (id: string) => void;
 }
 
-const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSelected, unreadCount, onSelect, canSwipe, onEdit, onDelete }) => {
+const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSelected, unreadCount, onSelect, canSwipe, canEdit, canDelete, onEdit, onDelete }) => {
     const { updateTicketStatus } = useTicketStore();
     const [swipeX, setSwipeX] = useState(0);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -128,38 +130,44 @@ const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSel
                     {unreadCount > 0 && (
                         <span className="unread-badge">{unreadCount}</span>
                     )}
-                    {/* 더보기 버튼 */}
-                    <div className="ticket-menu-wrap" ref={menuRef}>
-                        <button
-                            className="ticket-menu-btn"
-                            onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v); setConfirmDelete(false); }}
-                            title="더보기"
-                        >
-                            <MoreVertical size={14} />
-                        </button>
-                        {menuOpen && (
-                            <div className="ticket-dropdown">
-                                {confirmDelete ? (
-                                    <div className="ticket-dropdown-confirm">
-                                        <span>정말 삭제할까요?</span>
-                                        <div className="ticket-dropdown-confirm-btns">
-                                            <button className="ticket-dropdown-del-confirm" onClick={(e) => { e.stopPropagation(); onDelete(ticket.id); setMenuOpen(false); }}>삭제</button>
-                                            <button className="ticket-dropdown-cancel" onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}>취소</button>
+                    {/* 더보기 버튼: 수정/삭제 중 하나라도 권한 있을 때만 표시 */}
+                    {(canEdit || canDelete) && (
+                        <div className="ticket-menu-wrap" ref={menuRef}>
+                            <button
+                                className="ticket-menu-btn"
+                                onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v); setConfirmDelete(false); }}
+                                title="더보기"
+                            >
+                                <MoreVertical size={14} />
+                            </button>
+                            {menuOpen && (
+                                <div className="ticket-dropdown">
+                                    {confirmDelete ? (
+                                        <div className="ticket-dropdown-confirm">
+                                            <span>정말 삭제할까요?</span>
+                                            <div className="ticket-dropdown-confirm-btns">
+                                                <button className="ticket-dropdown-del-confirm" onClick={(e) => { e.stopPropagation(); onDelete(ticket.id); setMenuOpen(false); }}>삭제</button>
+                                                <button className="ticket-dropdown-cancel" onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}>취소</button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <button className="ticket-dropdown-item" onClick={(e) => { e.stopPropagation(); onEdit(ticket); setMenuOpen(false); }}>
-                                            <Pencil size={13} /> 수정
-                                        </button>
-                                        <button className="ticket-dropdown-item danger" onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}>
-                                            <Trash2 size={13} /> 삭제
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                                    ) : (
+                                        <>
+                                            {canEdit && (
+                                                <button className="ticket-dropdown-item" onClick={(e) => { e.stopPropagation(); onEdit(ticket); setMenuOpen(false); }}>
+                                                    <Pencil size={13} /> 수정
+                                                </button>
+                                            )}
+                                            {canDelete && (
+                                                <button className="ticket-dropdown-item danger" onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}>
+                                                    <Trash2 size={13} /> 삭제
+                                                </button>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
                 <h3 className="ticket-title">{ticket.title}</h3>
                 <p className="ticket-desc">{ticket.description}</p>
@@ -170,7 +178,7 @@ const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSel
 
 export const TicketList: React.FC = () => {
     const { tickets, activeTab, selectedTicketId, setSelectedTicketId, fetchTickets, createTicket, deleteTicket, updateTicket, isLoadingData, unreadCounts } = useTicketStore();
-    const { user, currentWorkspace } = useAuthStore();
+    const { user, currentWorkspace, currentWorkspaceRole } = useAuthStore();
 
     // 생성 모달 state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -369,18 +377,24 @@ export const TicketList: React.FC = () => {
                         {searchQuery.trim() ? `"${searchQuery.trim()}" 검색 결과가 없습니다.` : '해당 상태의 티켓이 없습니다.'}
                     </div>
                 ) : (
-                    filteredTickets.map(ticket => (
-                        <SwipeableTicketItem
-                            key={ticket.id}
-                            ticket={ticket}
-                            isSelected={selectedTicketId === ticket.id}
-                            unreadCount={unreadCounts[ticket.id] ?? 0}
-                            onSelect={() => setSelectedTicketId(ticket.id)}
-                            canSwipe={activeTab === 'in_progress'}
-                            onEdit={handleEditOpen}
-                            onDelete={handleDelete}
-                        />
-                    ))
+                    filteredTickets.map(ticket => {
+                        const isCreator = user?.id === ticket.requesting_user_id;
+                        const isLeader = currentWorkspaceRole === 'leader';
+                        return (
+                            <SwipeableTicketItem
+                                key={ticket.id}
+                                ticket={ticket}
+                                isSelected={selectedTicketId === ticket.id}
+                                unreadCount={unreadCounts[ticket.id] ?? 0}
+                                onSelect={() => setSelectedTicketId(ticket.id)}
+                                canSwipe={activeTab === 'in_progress'}
+                                canEdit={isCreator}
+                                canDelete={isCreator || isLeader}
+                                onEdit={handleEditOpen}
+                                onDelete={handleDelete}
+                            />
+                        );
+                    })
                 )}
             </div>
 
