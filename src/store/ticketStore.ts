@@ -189,13 +189,14 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
             selectedTicketId: state.selectedTicketId === id ? null : state.selectedTicketId,
             bookmarks: state.bookmarks.filter(b => b.ticket_id !== id),
         }));
-        // 북마크 먼저 삭제 후 티켓 삭제 (FK 제약 방어)
+        // FK 제약 방어: 연관 데이터 먼저 삭제
         await supabase.from('message_bookmarks').delete().eq('ticket_id', id);
-        const { error } = await supabase.from('tickets').delete().eq('id', id);
-        if (error) {
-            console.error('Error deleting ticket:', error);
+        await supabase.from('messages').delete().eq('ticket_id', id);
+        const { error, count } = await supabase.from('tickets').delete({ count: 'exact' }).eq('id', id);
+        if (error || count === 0) {
+            console.error('Error deleting ticket:', error ?? '0건 삭제 (RLS 차단 의심)');
             set({ tickets: prevTickets });
-            throw error;
+            throw new Error(error?.message ?? '삭제 권한이 없거나 이미 삭제된 티켓입니다.');
         }
     },
 
