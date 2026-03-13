@@ -443,7 +443,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 schema: 'public',
                 table: 'tickets',
                 filter: `workspace_id=eq.${currentWorkspace.id}`
-            }, (payload) => {
+            }, async (payload) => {
                 console.log('📝 [Realtime] Ticket Change:', payload);
                 const { eventType, new: newTicket, old: oldTicket } = payload;
 
@@ -452,10 +452,30 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                         if (state.tickets.some(t => t.id === (newTicket as Ticket).id)) return state;
                         return { tickets: [newTicket as Ticket, ...state.tickets] };
                     });
+                    // 내가 등록한 티켓이 아닐 때 알림
+                    const { data: { user: u } } = await supabase.auth.getUser();
+                    if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && u && (newTicket as Ticket).requesting_user_id !== u.id) {
+                        new Notification('새 업무 요청이 등록됐습니다', {
+                            body: (newTicket as Ticket).title,
+                            icon: '/icon-192.png',
+                            tag: `ticket-${(newTicket as Ticket).id}`,
+                        });
+                    }
                 } else if (eventType === 'UPDATE') {
                     set((state) => ({
                         tickets: state.tickets.map(t => t.id === (newTicket as Ticket).id ? { ...t, ...newTicket } : t)
                     }));
+                    // 담당자가 나로 배정됐을 때 알림
+                    const { data: { user: u } } = await supabase.auth.getUser();
+                    const prev = oldTicket as Partial<Ticket>;
+                    const next = newTicket as Ticket;
+                    if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && u && next.assignee_id === u.id && prev.assignee_id !== u.id) {
+                        new Notification('담당자로 배정됐습니다', {
+                            body: next.title,
+                            icon: '/icon-192.png',
+                            tag: `assign-${next.id}`,
+                        });
+                    }
                 } else if (eventType === 'DELETE') {
                     set((state) => ({
                         tickets: state.tickets.filter(t => t.id !== (oldTicket as Ticket).id),
@@ -467,12 +487,15 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 const newMessage = payload.new as RealtimeMessagePayload;
                 const { data: { user } } = await supabase.auth.getUser();
 
-                // 내 메시지가 아니고 알림 권한이 있을 때 브라우저 알림 발송
-                if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && user && newMessage.user_id !== user.id) {
-                    new Notification('CS Talk - 새 메시지', {
-                        body: newMessage.content,
+                // 내 메시지가 아니고, 현재 보고 있는 티켓이 아니고, 알림 권한 있을 때만 발송
+                const isMyMessage = user && newMessage.user_id === user.id;
+                const isCurrentTicket = newMessage.ticket_id === get().selectedTicketId;
+                if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && !isMyMessage && !isCurrentTicket) {
+                    const ticket = get().tickets.find(t => t.id === newMessage.ticket_id);
+                    new Notification(`새 메시지 — ${ticket?.title ?? '업무 요청'}`, {
+                        body: newMessage.content.length > 80 ? newMessage.content.slice(0, 80) + '…' : newMessage.content,
                         icon: '/icon-192.png',
-                        tag: newMessage.ticket_id
+                        tag: `msg-${newMessage.ticket_id}`,
                     });
                 }
 
