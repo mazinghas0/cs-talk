@@ -83,7 +83,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                     return;
                 }
 
-                // 실제 유저 변경(SIGNED_IN, SIGNED_OUT)만 로딩 표시
+                // SIGNED_IN이지만 동일 유저 재발화 (탭 복귀, 토큰 갱신 후 재발화 등) — 조용히 처리
+                if (event === 'SIGNED_IN' && get().user?.id === session?.user?.id) {
+                    set({ session, user: session?.user || null });
+                    return;
+                }
+
+                // 실제 유저 변경(신규 로그인, 로그아웃)만 로딩 표시
                 set({ session, user: session?.user || null, isLoading: true });
                 if (session?.user) {
                     await get().fetchProfile(session.user.id);
