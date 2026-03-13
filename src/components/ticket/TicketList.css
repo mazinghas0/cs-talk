@@ -395,6 +395,140 @@
     color: var(--text-primary);
 }
 
+/* ===================================
+   필터 바
+   =================================== */
+.filter-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 1rem 0.5rem 1rem;
+}
+
+.filter-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.filter-toggle-btn:hover,
+.filter-toggle-btn.active {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.filter-toggle-btn.has-filter {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.filter-reset-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: color 0.15s;
+}
+
+.filter-reset-btn:hover {
+    color: var(--accent-danger);
+}
+
+.filter-bar {
+    margin: 0 1rem 0.5rem 1rem;
+    padding: 0.75rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.filter-section {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.filter-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    padding-top: 4px;
+    min-width: 44px;
+}
+
+.filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.filter-chip {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.filter-chip:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.filter-chip.selected {
+    font-weight: 700;
+}
+
+.priority-chip.urgent.selected { background: rgba(239,68,68,0.15); border-color: var(--accent-danger); color: var(--accent-danger); }
+.priority-chip.high.selected   { background: rgba(245,158,11,0.15); border-color: var(--accent-warning); color: var(--accent-warning); }
+.priority-chip.medium.selected { background: rgba(16,185,129,0.15); border-color: var(--accent-success); color: var(--accent-success); }
+.priority-chip.low.selected    { background: rgba(99,102,241,0.15); border-color: var(--accent-primary); color: var(--accent-primary); }
+
+.tag-filter-chip.selected {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+/* ===================================
+   담당자 표시
+   =================================== */
+.ticket-assignee {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 0.3rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.assignee-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent-success);
+    flex-shrink: 0;
+}
+
 /* 티켓 더보기 메뉴 */
 .ticket-menu-wrap {
     position: relative;

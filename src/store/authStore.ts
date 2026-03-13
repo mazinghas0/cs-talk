@@ -12,6 +12,13 @@ interface Profile {
     created_at?: string;
 }
 
+export interface WorkspaceMemberProfile {
+    user_id: string;
+    role: 'leader' | 'member';
+    full_name: string | null;
+    email: string;
+}
+
 interface AuthStore {
     user: User | null;
     session: Session | null;
@@ -23,6 +30,7 @@ interface AuthStore {
     currentWorkspace: Workspace | null;
     currentWorkspaceRole: 'leader' | 'member' | null;
     workspaceRoles: Record<string, 'leader' | 'member'>;
+    workspaceMembers: WorkspaceMemberProfile[];
 
     initialize: () => void;
     setUser: (user: User | null) => void;
@@ -33,6 +41,7 @@ interface AuthStore {
     fetchAllProfiles: () => Promise<void>;
     updateUserRole: (targetId: string, newRole: 'user' | 'admin') => Promise<void>;
     fetchWorkspaces: () => Promise<void>;
+    fetchWorkspaceMembers: (workspaceId: string) => Promise<void>;
     setCurrentWorkspace: (workspace: Workspace | null) => void;
     createWorkspace: (name: string) => Promise<void>;
     generateInviteCode: (workspaceId: string) => Promise<string>;
@@ -50,6 +59,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     currentWorkspace: null,
     currentWorkspaceRole: null,
     workspaceRoles: {},
+    workspaceMembers: [],
 
     initialize: async () => {
         try {
@@ -219,7 +229,30 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             if (!get().currentWorkspace) {
                 set({ currentWorkspace: currentWs });
             }
+            get().fetchWorkspaceMembers(currentWs.id);
         }
+    },
+
+    fetchWorkspaceMembers: async (workspaceId) => {
+        const { data, error } = await supabase
+            .from('workspace_members')
+            .select('user_id, role, profiles:user_id(full_name, email)')
+            .eq('workspace_id', workspaceId);
+
+        if (error || !data) return;
+
+        const members: WorkspaceMemberProfile[] = (data as {
+            user_id: string;
+            role: string;
+            profiles: { full_name: string | null; email: string } | null;
+        }[]).map(m => ({
+            user_id: m.user_id,
+            role: m.role as 'leader' | 'member',
+            full_name: m.profiles?.full_name ?? null,
+            email: m.profiles?.email ?? '',
+        }));
+
+        set({ workspaceMembers: members });
     },
 
     setCurrentWorkspace: (workspace) => {
@@ -227,7 +260,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         set({
             currentWorkspace: workspace,
             currentWorkspaceRole: workspace ? (roles[workspace.id] ?? null) : null,
+            workspaceMembers: [],
         });
+        if (workspace) get().fetchWorkspaceMembers(workspace.id);
     },
 
     generateInviteCode: async (workspaceId) => {

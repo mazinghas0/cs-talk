@@ -3,10 +3,10 @@ import './TicketList.css';
 import './TicketModal.css';
 import { useTicketStore } from '../../store/ticketStore';
 import { TicketTabs } from './TicketTabs';
-import { Clock, Plus, X, RefreshCw, Search, Check, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Clock, Plus, X, RefreshCw, Search, Check, MoreVertical, Pencil, Trash2, Filter } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { useAuthStore } from '../../store/authStore';
+import { useAuthStore, WorkspaceMemberProfile } from '../../store/authStore';
 import { TicketPriority, Ticket } from '../../types/ticket';
 
 interface SwipeableTicketItemProps {
@@ -19,9 +19,10 @@ interface SwipeableTicketItemProps {
     canDelete: boolean;
     onEdit: (ticket: Ticket) => void;
     onDelete: (id: string) => void;
+    workspaceMembers: WorkspaceMemberProfile[];
 }
 
-const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSelected, unreadCount, onSelect, canSwipe, canEdit, canDelete, onEdit, onDelete }) => {
+const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSelected, unreadCount, onSelect, canSwipe, canEdit, canDelete, onEdit, onDelete, workspaceMembers }) => {
     const { updateTicketStatus } = useTicketStore();
     const [swipeX, setSwipeX] = useState(0);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -178,6 +179,15 @@ const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSel
                     </div>
                 )}
                 <p className="ticket-desc">{ticket.description}</p>
+                {ticket.assignee_id && (() => {
+                    const assignee = workspaceMembers.find(m => m.user_id === ticket.assignee_id);
+                    return assignee ? (
+                        <div className="ticket-assignee">
+                            <span className="assignee-dot" />
+                            {assignee.full_name ?? assignee.email}
+                        </div>
+                    ) : null;
+                })()}
             </div>
         </div>
     );
@@ -185,7 +195,7 @@ const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSel
 
 export const TicketList: React.FC = () => {
     const { tickets, activeTab, selectedTicketId, setSelectedTicketId, fetchTickets, createTicket, deleteTicket, updateTicket, isLoadingData, unreadCounts } = useTicketStore();
-    const { user, currentWorkspace, currentWorkspaceRole } = useAuthStore();
+    const { user, currentWorkspace, currentWorkspaceRole, workspaceMembers } = useAuthStore();
 
     // 생성 모달 state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -206,8 +216,16 @@ export const TicketList: React.FC = () => {
 
     const TICKET_TAGS = ['출고', '배송', '반품', '환불', '교환', '재고', '결제', '인사', '기타'];
 
-    // Search state
+    // Search & Filter state
     const [searchQuery, setSearchQuery] = useState('');
+    const [filterPriority, setFilterPriority] = useState<TicketPriority | null>(null);
+    const [filterTags, setFilterTags] = useState<string[]>([]);
+    const [showFilterBar, setShowFilterBar] = useState(false);
+
+    // 생성 모달 담당자 state
+    const [newAssigneeId, setNewAssigneeId] = useState('');
+    // 수정 모달 담당자 state
+    const [editAssigneeId, setEditAssigneeId] = useState('');
 
     // Pull-to-refresh state
     const [pullDistance, setPullDistance] = useState(0);
@@ -250,11 +268,11 @@ export const TicketList: React.FC = () => {
     const q = searchQuery.trim().toLowerCase();
     const filteredTickets = tickets
         .filter(t => t.status === activeTab)
-        .filter(t =>
-            !q ||
-            t.title.toLowerCase().includes(q) ||
-            t.description.toLowerCase().includes(q)
-        );
+        .filter(t => !q || t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q))
+        .filter(t => !filterPriority || t.priority === filterPriority)
+        .filter(t => filterTags.length === 0 || filterTags.some(tag => (t.tags ?? []).includes(tag)));
+
+    const activeFilterCount = (filterPriority ? 1 : 0) + (filterTags.length > 0 ? 1 : 0);
 
     const handleEditOpen = (ticket: Ticket) => {
         setEditingTicket(ticket);
@@ -262,6 +280,7 @@ export const TicketList: React.FC = () => {
         setEditDesc(ticket.description);
         setEditPriority(ticket.priority);
         setEditTags(ticket.tags ?? []);
+        setEditAssigneeId(ticket.assignee_id ?? '');
     };
 
     const handleEditSubmit = async (e: React.FormEvent) => {
@@ -269,7 +288,13 @@ export const TicketList: React.FC = () => {
         if (!editingTicket || !editTitle.trim() || !editDesc.trim()) return;
         setIsEditSubmitting(true);
         try {
-            await updateTicket(editingTicket.id, { title: editTitle.trim(), description: editDesc.trim(), priority: editPriority, tags: editTags });
+            await updateTicket(editingTicket.id, {
+                title: editTitle.trim(),
+                description: editDesc.trim(),
+                priority: editPriority,
+                tags: editTags,
+                assignee_id: editAssigneeId || undefined,
+            });
             setEditingTicket(null);
         } catch (err) {
             console.error('Update Ticket Error:', err);
@@ -302,13 +327,14 @@ export const TicketList: React.FC = () => {
             if (newImage) {
                 imageUrl = await useTicketStore.getState().uploadImage(newImage);
             }
-            await createTicket(newTitle, newDesc, newPriority, user.id, currentWorkspace.id, imageUrl, newTags);
+            await createTicket(newTitle, newDesc, newPriority, user.id, currentWorkspace.id, imageUrl, newTags, newAssigneeId || undefined);
             setIsModalOpen(false);
             setNewTitle('');
             setNewDesc('');
             setNewPriority('medium');
             setNewImage(null);
             setNewTags([]);
+            setNewAssigneeId('');
         } catch (err: any) {
             console.error('Create Ticket Error:', err);
             const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류';
@@ -369,6 +395,58 @@ export const TicketList: React.FC = () => {
                 )}
             </div>
 
+            {/* 필터 토글 버튼 */}
+            <div className="filter-toggle-row">
+                <button
+                    className={`filter-toggle-btn ${showFilterBar ? 'active' : ''} ${activeFilterCount > 0 ? 'has-filter' : ''}`}
+                    onClick={() => setShowFilterBar(v => !v)}
+                >
+                    <Filter size={13} />
+                    필터{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+                </button>
+                {activeFilterCount > 0 && (
+                    <button className="filter-reset-btn" onClick={() => { setFilterPriority(null); setFilterTags([]); }}>
+                        초기화
+                    </button>
+                )}
+            </div>
+
+            {/* 필터 바 */}
+            {showFilterBar && (
+                <div className="filter-bar">
+                    <div className="filter-section">
+                        <span className="filter-label">우선순위</span>
+                        <div className="filter-chips">
+                            {(['urgent', 'high', 'medium', 'low'] as TicketPriority[]).map(p => (
+                                <button
+                                    key={p}
+                                    className={`filter-chip priority-chip ${p} ${filterPriority === p ? 'selected' : ''}`}
+                                    onClick={() => setFilterPriority(prev => prev === p ? null : p)}
+                                >
+                                    {p === 'urgent' ? '긴급' : p === 'high' ? '높음' : p === 'medium' ? '보통' : '낮음'}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="filter-section">
+                        <span className="filter-label">태그</span>
+                        <div className="filter-chips">
+                            {TICKET_TAGS.map(tag => (
+                                <button
+                                    key={tag}
+                                    className={`filter-chip tag-filter-chip ${filterTags.includes(tag) ? 'selected' : ''}`}
+                                    onClick={() => setFilterTags(prev =>
+                                        prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                                    )}
+                                >
+                                    {tag}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Pull-to-refresh indicator */}
             {pullDistance > 0 && (
                 <div className="pull-indicator" style={{ height: pullDistance }}>
@@ -405,6 +483,7 @@ export const TicketList: React.FC = () => {
                                 canDelete={isCreator || isLeader}
                                 onEdit={handleEditOpen}
                                 onDelete={handleDelete}
+                                workspaceMembers={workspaceMembers}
                             />
                         );
                     })
@@ -491,6 +570,19 @@ export const TicketList: React.FC = () => {
                                     ))}
                                 </div>
                             </div>
+                            {workspaceMembers.length > 0 && (
+                                <div className="form-group">
+                                    <label>담당자</label>
+                                    <select value={newAssigneeId} onChange={e => setNewAssigneeId(e.target.value)}>
+                                        <option value="">담당자 없음</option>
+                                        {workspaceMembers.map(m => (
+                                            <option key={m.user_id} value={m.user_id}>
+                                                {m.full_name ?? m.email}{m.role === 'leader' ? ' (리더)' : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label>첨부 이미지 (사진 선택, 캡처 붙여넣기, 또는 드래그 앤 드롭)</label>
                                 {newImage && (
@@ -560,6 +652,19 @@ export const TicketList: React.FC = () => {
                                     ))}
                                 </div>
                             </div>
+                            {workspaceMembers.length > 0 && (
+                                <div className="form-group">
+                                    <label>담당자</label>
+                                    <select value={editAssigneeId} onChange={e => setEditAssigneeId(e.target.value)}>
+                                        <option value="">담당자 없음</option>
+                                        {workspaceMembers.map(m => (
+                                            <option key={m.user_id} value={m.user_id}>
+                                                {m.full_name ?? m.email}{m.role === 'leader' ? ' (리더)' : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label>상세 내용</label>
                                 <textarea
