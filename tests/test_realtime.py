@@ -9,6 +9,8 @@ T05. 채팅 메시지 전송 → 즉시 표시
 T06. 고객 PIN 인증 페이지 렌더링
 T07. 실시간 채팅 — PC ↔ 모바일 교차 수신
 T08. 북마크 추가 → 패널 노출 → 클릭 시 스크롤 이동
+T09. 티켓 수정 → 제목 변경 확인
+T10. 티켓 삭제 → 목록에서 제거 확인
 
 실행 방법:
   1. tests/.env.test 파일 생성 (tests/.env.test.example 참고)
@@ -438,6 +440,139 @@ def test_bookmark(page: Page) -> bool:
 
 
 # ──────────────────────────────────────────────
+# T09. 티켓 수정 → 제목 변경 확인
+# ──────────────────────────────────────────────
+
+@requires_auth
+def test_edit_ticket(page: Page) -> bool:
+    print("\n[T09] 티켓 수정")
+
+    if not login(page, "T09"):
+        return result("티켓 수정 플로우", False)
+
+    if page.locator(".empty-workspace-screen").is_visible():
+        print("  [SKIP] 워크스페이스 없음")
+        return True
+
+    # 내가 만든 티켓 생성 (수정 권한 있음)
+    try:
+        page.locator(".icon-btn-create").click()
+        page.wait_for_selector(".modal-form", timeout=5000)
+    except Exception:
+        return result("티켓 생성 모달 열림", False)
+
+    ts = int(time.time())
+    original_title = f"수정테스트 원본 {ts}"
+    page.locator('.modal-form input[type="text"]').fill(original_title)
+    page.locator(".modal-form textarea").fill("수정 테스트용 티켓입니다.")
+    page.locator(".btn-submit").click()
+
+    try:
+        page.wait_for_selector(f"text={original_title}", timeout=8000)
+    except Exception:
+        return result("테스트용 티켓 생성", False)
+
+    # 더보기 버튼 → 수정 클릭
+    ticket_item = page.locator(".ticket-item").filter(has_text=original_title)
+    ticket_item.hover()
+    ticket_item.locator(".ticket-menu-btn").click()
+
+    try:
+        page.wait_for_selector(".ticket-dropdown", timeout=3000)
+    except Exception:
+        screenshot(page, "T09_dropdown_not_shown")
+        return result("더보기 드롭다운 열림", False)
+
+    page.locator(".ticket-dropdown-item:not(.danger)").click()
+
+    try:
+        page.wait_for_selector(".modal-form", timeout=3000)
+    except Exception:
+        screenshot(page, "T09_edit_modal_not_shown")
+        return result("수정 모달 열림", False)
+
+    # 제목 변경
+    new_title = f"수정테스트 변경 {ts}"
+    title_input = page.locator('.modal-form input[type="text"]')
+    title_input.press("Control+a")
+    title_input.fill(new_title)
+    page.locator(".btn-submit").click()
+
+    try:
+        page.wait_for_selector(f"text={new_title}", timeout=5000)
+        screenshot(page, "T09_edit_success")
+        return result(f"티켓 수정 → 제목 변경 확인", True)
+    except Exception:
+        screenshot(page, "T09_edit_failed")
+        return result("티켓 수정 → 제목 변경 확인", False)
+
+
+# ──────────────────────────────────────────────
+# T10. 티켓 삭제 → 목록에서 제거 확인
+# ──────────────────────────────────────────────
+
+@requires_auth
+def test_delete_ticket(page: Page) -> bool:
+    print("\n[T10] 티켓 삭제")
+
+    if not login(page, "T10"):
+        return result("티켓 삭제 플로우", False)
+
+    if page.locator(".empty-workspace-screen").is_visible():
+        print("  [SKIP] 워크스페이스 없음")
+        return True
+
+    # 내가 만든 티켓 생성 (삭제 권한 있음)
+    try:
+        page.locator(".icon-btn-create").click()
+        page.wait_for_selector(".modal-form", timeout=5000)
+    except Exception:
+        return result("티켓 생성 모달 열림", False)
+
+    ts = int(time.time())
+    del_title = f"삭제테스트 티켓 {ts}"
+    page.locator('.modal-form input[type="text"]').fill(del_title)
+    page.locator(".modal-form textarea").fill("삭제 테스트용 티켓입니다.")
+    page.locator(".btn-submit").click()
+
+    try:
+        page.wait_for_selector(f"text={del_title}", timeout=8000)
+    except Exception:
+        return result("테스트용 티켓 생성", False)
+
+    # 더보기 버튼 → 삭제 클릭
+    ticket_item = page.locator(".ticket-item").filter(has_text=del_title)
+    ticket_item.hover()
+    ticket_item.locator(".ticket-menu-btn").click()
+
+    try:
+        page.wait_for_selector(".ticket-dropdown", timeout=3000)
+    except Exception:
+        screenshot(page, "T10_dropdown_not_shown")
+        return result("더보기 드롭다운 열림", False)
+
+    page.locator(".ticket-dropdown-item.danger").click()
+
+    # 2단계 확인 → 삭제 버튼
+    try:
+        page.wait_for_selector(".ticket-dropdown-del-confirm", timeout=3000)
+    except Exception:
+        screenshot(page, "T10_confirm_not_shown")
+        return result("삭제 확인 버튼 표시", False)
+
+    page.locator(".ticket-dropdown-del-confirm").click()
+
+    # 목록에서 사라졌는지 확인
+    try:
+        page.wait_for_selector(f"text={del_title}", state="hidden", timeout=5000)
+        screenshot(page, "T10_delete_success")
+        return result("티켓 삭제 → 목록에서 제거 확인", True)
+    except Exception:
+        screenshot(page, "T10_delete_failed")
+        return result("티켓 삭제 → 목록에서 제거 확인", False)
+
+
+# ──────────────────────────────────────────────
 # 실행
 # ──────────────────────────────────────────────
 
@@ -466,16 +601,20 @@ def main():
             results["T04_create_ticket"] = test_create_ticket(page)
             results["T05_send_message"] = test_send_message(page)
             results["T08_bookmark"] = test_bookmark(page)
+            results["T09_edit_ticket"] = test_edit_ticket(page)
+            results["T10_delete_ticket"] = test_delete_ticket(page)
             results["T03_logout"] = test_logout(page)
 
             browser.close()
         else:
-            print("\n[T02~T05, T08] TEST_PASSWORD 미설정 — 인증 필요 테스트 전체 SKIP")
+            print("\n[T02~T05, T08~T10] TEST_PASSWORD 미설정 — 인증 필요 테스트 전체 SKIP")
             results["T02_login"] = True
             results["T03_logout"] = True
             results["T04_create_ticket"] = True
             results["T05_send_message"] = True
             results["T08_bookmark"] = True
+            results["T09_edit_ticket"] = True
+            results["T10_delete_ticket"] = True
 
         # 실시간 테스트 (두 브라우저)
         results["T07_realtime"] = test_realtime_two_contexts(p)
