@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './ChatArea.css';
 import { useTicketStore } from '../../store/ticketStore';
 import { useAuthStore } from '../../store/authStore';
-import { Send, FilePlus, MessageSquareWarning, Edit2, Trash2, X, ChevronLeft, Share2, Bookmark } from 'lucide-react';
+import { Send, FilePlus, MessageSquareWarning, Edit2, Trash2, X, ChevronLeft, Share2, Bookmark, ChevronDown, RotateCcw } from 'lucide-react';
 import { ShareTicketModal } from './ShareTicketModal';
 import { MessageBubble } from './MessageBubble';
 import { MessageContextMenu } from './MessageContextMenu';
@@ -10,7 +10,7 @@ import { BookmarkPanel } from './BookmarkPanel';
 import { format, isSameDay, isSameMinute } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { supabase } from '../../lib/supabase';
-import { Message } from '../../types/ticket';
+import { Message, TicketPriority } from '../../types/ticket';
 import html2canvas from 'html2canvas';
 
 interface ChatAreaProps {
@@ -20,7 +20,7 @@ interface ChatAreaProps {
 
 export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
     const { tickets, selectedTicketId, messages, reactions, toggleReaction, sendMessage, deleteMessage, updateTicketStatus, deleteTicket, requestResolution, updateTicket, bookmarks, isBookmarkPanelOpen, setBookmarkPanelOpen, toggleBookmark, fetchBookmarks } = useTicketStore();
-    const { user } = useAuthStore();
+    const { user, workspaceMembers, currentWorkspaceRole } = useAuthStore();
     const ticket = tickets.find(t => t.id === selectedTicketId);
 
     const [newMessage, setNewMessage] = useState('');
@@ -35,8 +35,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [editTitle, setEditTitle] = useState('');
     const [editDesc, setEditDesc] = useState('');
-    const [editPriority, setEditPriority] = useState<any>('medium');
+    const [editPriority, setEditPriority] = useState<TicketPriority>('medium');
     const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+
+    // 퀵액션 드롭다운 상태
+    const [showPriorityMenu, setShowPriorityMenu] = useState(false);
+    const [showAssigneeMenu, setShowAssigneeMenu] = useState(false);
+    const priorityMenuRef = useRef<HTMLDivElement>(null);
+    const assigneeMenuRef = useRef<HTMLDivElement>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatMessagesRef = useRef<HTMLDivElement>(null);
@@ -78,6 +84,20 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
         fetchBookmarks();
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // 퀵액션 드롭다운 외부 클릭 시 닫기
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (priorityMenuRef.current && !priorityMenuRef.current.contains(e.target as Node)) {
+                setShowPriorityMenu(false);
+            }
+            if (assigneeMenuRef.current && !assigneeMenuRef.current.contains(e.target as Node)) {
+                setShowAssigneeMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
     // 채팅방 전환 시 즉시 맨 아래로 이동
     useEffect(() => {
         setHasNewMessage(false);
@@ -112,6 +132,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
     };
 
     const isAuthor = user?.id === ticket?.requesting_user_id;
+    const isLeader = currentWorkspaceRole === 'leader';
+
+    const PRIORITY_LABEL: Record<TicketPriority, string> = {
+        urgent: '긴급',
+        high: '높음',
+        medium: '보통',
+        low: '낮음',
+    };
 
     const handleDelete = async () => {
         if (!ticket) return;
@@ -373,27 +401,115 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                     >
                         <Bookmark size={16} />
                     </button>
-                    {ticket.status !== 'resolved' && (
-                        <>
-                            {isAuthor ? (
-                                <>
-                                    <button className="icon-btn-header" onClick={handleOpenEditModal} title="수정"><Edit2 size={16} /></button>
-                                    <button className="icon-btn-header" onClick={handleDelete} title="삭제"><Trash2 size={16} /></button>
-                                    <button className="btn-resolve" onClick={() => updateTicketStatus(ticket.id, 'resolved')}>완료 처리 (내가 작성함)</button>
-                                </>
-                            ) : (
-                                <>
-                                    {ticket.resolve_requested ? (
-                                        <span className="resolve-requested-badge">요청자에게 완료 확인 대기중</span>
-                                    ) : (
-                                        <button className="btn-request-resolve" onClick={handleRequestResolution}>이 업무 완료 설정 시도하기 (요청자 승인필요)</button>
-                                    )}
-                                </>
-                            )}
-                            <button className="icon-btn-header share-btn" onClick={() => setIsShareModalOpen(true)} title="고객에게 공유">
-                                <Share2 size={16} />
+                    {isAuthor && (
+                        <button className="icon-btn-header" onClick={handleOpenEditModal} title="수정">
+                            <Edit2 size={16} />
+                        </button>
+                    )}
+                    {(isAuthor || isLeader) && (
+                        <button className="icon-btn-header" onClick={handleDelete} title="삭제">
+                            <Trash2 size={16} />
+                        </button>
+                    )}
+                    <button className="icon-btn-header share-btn" onClick={() => setIsShareModalOpen(true)} title="고객에게 공유">
+                        <Share2 size={16} />
+                    </button>
+                </div>
+            </div>
+
+            {/* 퀵액션 바 */}
+            <div className="quick-action-bar">
+                {/* 우선순위 칩 */}
+                <div className="qa-chip-wrap" ref={priorityMenuRef}>
+                    <button
+                        className={`qa-chip priority-chip ${ticket.priority}`}
+                        onClick={() => setShowPriorityMenu(v => !v)}
+                    >
+                        {PRIORITY_LABEL[ticket.priority]}
+                        <ChevronDown size={11} />
+                    </button>
+                    {showPriorityMenu && (
+                        <div className="qa-dropdown">
+                            {(['urgent', 'high', 'medium', 'low'] as TicketPriority[]).map(p => (
+                                <button
+                                    key={p}
+                                    className={`qa-dropdown-item ${ticket.priority === p ? 'active' : ''}`}
+                                    onClick={async () => {
+                                        await updateTicket(ticket.id, { priority: p });
+                                        setShowPriorityMenu(false);
+                                    }}
+                                >
+                                    {PRIORITY_LABEL[p]}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* 담당자 칩 */}
+                {workspaceMembers.length > 0 && (
+                    <div className="qa-chip-wrap" ref={assigneeMenuRef}>
+                        <button
+                            className="qa-chip assignee-chip"
+                            onClick={() => setShowAssigneeMenu(v => !v)}
+                        >
+                            {ticket.assignee_id
+                                ? (workspaceMembers.find(m => m.user_id === ticket.assignee_id)?.full_name
+                                    ?? workspaceMembers.find(m => m.user_id === ticket.assignee_id)?.email
+                                    ?? '담당자')
+                                : '담당자 없음'}
+                            <ChevronDown size={11} />
+                        </button>
+                        {showAssigneeMenu && (
+                            <div className="qa-dropdown">
+                                <button
+                                    className={`qa-dropdown-item ${!ticket.assignee_id ? 'active' : ''}`}
+                                    onClick={async () => {
+                                        await updateTicket(ticket.id, { assignee_id: undefined });
+                                        setShowAssigneeMenu(false);
+                                    }}
+                                >
+                                    없음
+                                </button>
+                                {workspaceMembers.map(m => (
+                                    <button
+                                        key={m.user_id}
+                                        className={`qa-dropdown-item ${ticket.assignee_id === m.user_id ? 'active' : ''}`}
+                                        onClick={async () => {
+                                            await updateTicket(ticket.id, { assignee_id: m.user_id });
+                                            setShowAssigneeMenu(false);
+                                        }}
+                                    >
+                                        {m.full_name ?? m.email}{m.role === 'leader' ? ' (리더)' : ''}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* 완료/원복/요청 버튼 */}
+                <div className="qa-actions">
+                    {ticket.status === 'resolved' ? (
+                        (isAuthor || isLeader) && (
+                            <button className="qa-btn qa-btn-restore" onClick={() => updateTicketStatus(ticket.id, 'in_progress')}>
+                                <RotateCcw size={12} /> 되돌리기
                             </button>
-                        </>
+                        )
+                    ) : (
+                        isAuthor ? (
+                            <button className="qa-btn qa-btn-resolve" onClick={() => updateTicketStatus(ticket.id, 'resolved')}>
+                                완료 처리
+                            </button>
+                        ) : (
+                            ticket.resolve_requested ? (
+                                <span className="resolve-requested-badge">완료 확인 대기중</span>
+                            ) : (
+                                <button className="qa-btn qa-btn-request" onClick={handleRequestResolution}>
+                                    완료 요청
+                                </button>
+                            )
+                        )
                     )}
                 </div>
             </div>
@@ -620,7 +736,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                             </div>
                             <div className="form-group">
                                 <label>우선 순위</label>
-                                <select value={editPriority} onChange={(e) => setEditPriority(e.target.value)}>
+                                <select value={editPriority} onChange={(e) => setEditPriority(e.target.value as TicketPriority)}>
                                     <option value="low">낮음 (여유 시 처리)</option>
                                     <option value="medium">보통 (일반 요청)</option>
                                     <option value="high">높음 (빠른 처리 요망)</option>
