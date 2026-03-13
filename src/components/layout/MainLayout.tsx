@@ -19,6 +19,38 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     const [isInviteOpen, setIsInviteOpen] = React.useState(false);
     const [isShortcutsOpen, setIsShortcutsOpen] = React.useState(false);
     const [isDashboardOpen, setIsDashboardOpen] = React.useState(false);
+
+    // iOS 설치 배너
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
+    const [showIOSBanner, setShowIOSBanner] = React.useState(
+        () => isIOS && !isStandalone && !localStorage.getItem('cs_ios_banner_dismissed')
+    );
+
+    // 알림 권한 배너
+    const [notifPermission, setNotifPermission] = React.useState<NotificationPermission | 'unsupported'>(
+        () => (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported')
+    );
+    const [showNotifBanner, setShowNotifBanner] = React.useState(
+        () => typeof Notification !== 'undefined' && Notification.permission === 'default' && !localStorage.getItem('cs_notif_banner_dismissed')
+    );
+
+    const handleRequestNotif = async () => {
+        if (typeof Notification === 'undefined') return;
+        const result = await Notification.requestPermission();
+        setNotifPermission(result);
+        setShowNotifBanner(false);
+    };
+
+    const dismissIOSBanner = () => {
+        localStorage.setItem('cs_ios_banner_dismissed', '1');
+        setShowIOSBanner(false);
+    };
+
+    const dismissNotifBanner = () => {
+        localStorage.setItem('cs_notif_banner_dismissed', '1');
+        setShowNotifBanner(false);
+    };
     const [installPrompt, setInstallPrompt] = React.useState<Event | null>(null);
     const [joinMode, setJoinMode] = useState<'select' | 'create' | 'code'>('select');
     const [joinCode, setJoinCode] = useState('');
@@ -261,7 +293,31 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     }
 
     return (
-        <div className={`layout-container${isMobile ? ' is-mobile' : ''}`}>
+        <div className={`layout-container${isMobile ? ' is-mobile' : ''}`} style={{ flexDirection: 'column' }}>
+
+            {/* iOS 설치 안내 배너 */}
+            {showIOSBanner && (
+                <div className="install-banner ios-banner">
+                    <span>
+                        Safari에서 <strong>공유 버튼</strong> → <strong>홈 화면에 추가</strong>를 누르면 앱처럼 사용할 수 있어요.
+                    </span>
+                    <button className="banner-dismiss-btn" onClick={dismissIOSBanner}>✕</button>
+                </div>
+            )}
+
+            {/* 알림 권한 배너 */}
+            {showNotifBanner && notifPermission === 'default' && (
+                <div className="install-banner notif-banner">
+                    <span>새 메시지 알림을 받으시겠어요?</span>
+                    <div className="banner-actions">
+                        <button className="banner-allow-btn" onClick={handleRequestNotif}>허용하기</button>
+                        <button className="banner-dismiss-btn" onClick={dismissNotifBanner}>✕</button>
+                    </div>
+                </div>
+            )}
+
+            {/* 앱 본체 (배너 아래 나머지 공간) */}
+            <div className={`layout-inner${isMobile ? ' is-mobile' : ''}`}>
 
             {/* 1. 사이드바 (데스크톱 전용) */}
             {!isMobile && (
@@ -420,6 +476,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                     </div>
                 </nav>
             )}
+            </div> {/* layout-inner */}
         </div>
     );
 };
