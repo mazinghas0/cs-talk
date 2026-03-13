@@ -34,7 +34,7 @@ interface TicketStore {
     fetchTickets: () => Promise<void>;
     fetchUnreadCounts: () => Promise<void>;
     markAsRead: (ticketId: string) => Promise<void>;
-    createTicket: (title: string, description: string, priority: TicketPriority, userId: string, workspaceId: string, imageUrl?: string) => Promise<void>;
+    createTicket: (title: string, description: string, priority: TicketPriority, userId: string, workspaceId: string, imageUrl?: string, tags?: string[]) => Promise<void>;
     updateTicketStatus: (id: string, status: TicketStatus) => Promise<void>;
     deleteTicket: (id: string) => Promise<void>;
     updateTicket: (id: string, updates: Partial<Ticket>) => Promise<void>;
@@ -142,10 +142,10 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         if (error) console.error('Error marking as read:', error);
     },
 
-    createTicket: async (title, description, priority, userId, workspaceId, imageUrl) => {
+    createTicket: async (title, description, priority, userId, workspaceId, imageUrl, tags = []) => {
         const { data, error } = await supabase
             .from('tickets')
-            .insert([{ title, description, priority, requesting_user_id: userId, workspace_id: workspaceId, status: 'in_progress', image_url: imageUrl }])
+            .insert([{ title, description, priority, requesting_user_id: userId, workspace_id: workspaceId, status: 'in_progress', image_url: imageUrl, tags }])
             .select()
             .single();
 

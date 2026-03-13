@@ -170,6 +170,13 @@ const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSel
                     )}
                 </div>
                 <h3 className="ticket-title">{ticket.title}</h3>
+                {ticket.tags && ticket.tags.length > 0 && (
+                    <div className="ticket-tags">
+                        {ticket.tags.map(tag => (
+                            <span key={tag} className="ticket-tag">{tag}</span>
+                        ))}
+                    </div>
+                )}
                 <p className="ticket-desc">{ticket.description}</p>
             </div>
         </div>
@@ -186,6 +193,7 @@ export const TicketList: React.FC = () => {
     const [newDesc, setNewDesc] = useState('');
     const [newPriority, setNewPriority] = useState<TicketPriority>('medium');
     const [newImage, setNewImage] = useState<File | null>(null);
+    const [newTags, setNewTags] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // 수정 모달 state
@@ -193,7 +201,10 @@ export const TicketList: React.FC = () => {
     const [editTitle, setEditTitle] = useState('');
     const [editDesc, setEditDesc] = useState('');
     const [editPriority, setEditPriority] = useState<TicketPriority>('medium');
+    const [editTags, setEditTags] = useState<string[]>([]);
     const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+    const TICKET_TAGS = ['출고', '배송', '반품', '환불', '교환', '재고', '결제', '인사', '기타'];
 
     // Search state
     const [searchQuery, setSearchQuery] = useState('');
@@ -250,6 +261,7 @@ export const TicketList: React.FC = () => {
         setEditTitle(ticket.title);
         setEditDesc(ticket.description);
         setEditPriority(ticket.priority);
+        setEditTags(ticket.tags ?? []);
     };
 
     const handleEditSubmit = async (e: React.FormEvent) => {
@@ -257,7 +269,7 @@ export const TicketList: React.FC = () => {
         if (!editingTicket || !editTitle.trim() || !editDesc.trim()) return;
         setIsEditSubmitting(true);
         try {
-            await updateTicket(editingTicket.id, { title: editTitle.trim(), description: editDesc.trim(), priority: editPriority });
+            await updateTicket(editingTicket.id, { title: editTitle.trim(), description: editDesc.trim(), priority: editPriority, tags: editTags });
             setEditingTicket(null);
         } catch (err) {
             console.error('Update Ticket Error:', err);
@@ -290,12 +302,13 @@ export const TicketList: React.FC = () => {
             if (newImage) {
                 imageUrl = await useTicketStore.getState().uploadImage(newImage);
             }
-            await createTicket(newTitle, newDesc, newPriority, user.id, currentWorkspace.id, imageUrl);
+            await createTicket(newTitle, newDesc, newPriority, user.id, currentWorkspace.id, imageUrl, newTags);
             setIsModalOpen(false);
             setNewTitle('');
             setNewDesc('');
             setNewPriority('medium');
             setNewImage(null);
+            setNewTags([]);
         } catch (err: any) {
             console.error('Create Ticket Error:', err);
             const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류';
@@ -464,6 +477,21 @@ export const TicketList: React.FC = () => {
                                 />
                             </div>
                             <div className="form-group">
+                                <label>태그</label>
+                                <div className="tag-selector">
+                                    {TICKET_TAGS.map(tag => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            className={`tag-chip ${newTags.includes(tag) ? 'selected' : ''}`}
+                                            onClick={() => setNewTags(prev =>
+                                                prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                                            )}
+                                        >{tag}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="form-group">
                                 <label>첨부 이미지 (사진 선택, 캡처 붙여넣기, 또는 드래그 앤 드롭)</label>
                                 {newImage && (
                                     <div className="image-preview" style={{ marginBottom: '8px', fontSize: '0.85rem', color: 'var(--accent-success)' }}>
@@ -516,6 +544,21 @@ export const TicketList: React.FC = () => {
                                     <option value="high">높음 (빠른 처리 요망)</option>
                                     <option value="urgent">긴급 (즉시 처리 및 장애)</option>
                                 </select>
+                            </div>
+                            <div className="form-group">
+                                <label>태그</label>
+                                <div className="tag-selector">
+                                    {TICKET_TAGS.map(tag => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            className={`tag-chip ${editTags.includes(tag) ? 'selected' : ''}`}
+                                            onClick={() => setEditTags(prev =>
+                                                prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                                            )}
+                                        >{tag}</button>
+                                    ))}
+                                </div>
                             </div>
                             <div className="form-group">
                                 <label>상세 내용</label>

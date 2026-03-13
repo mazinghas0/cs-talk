@@ -15,6 +15,7 @@ export interface Ticket {
     assignee_id?: string;
     requesting_user_id: string;
     resolve_requested: boolean;
+    tags: string[];
 }
 
 export interface Workspace {
