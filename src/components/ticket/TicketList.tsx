@@ -3,7 +3,7 @@ import './TicketList.css';
 import './TicketModal.css';
 import { useTicketStore } from '../../store/ticketStore';
 import { TicketTabs } from './TicketTabs';
-import { Clock, Plus, X, RefreshCw, Search, Check } from 'lucide-react';
+import { Clock, Plus, X, RefreshCw, Search, Check, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useAuthStore } from '../../store/authStore';
@@ -15,16 +15,34 @@ interface SwipeableTicketItemProps {
     unreadCount: number;
     onSelect: () => void;
     canSwipe: boolean;
+    onEdit: (ticket: Ticket) => void;
+    onDelete: (id: string) => void;
 }
 
-const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSelected, unreadCount, onSelect, canSwipe }) => {
+const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSelected, unreadCount, onSelect, canSwipe, onEdit, onDelete }) => {
     const { updateTicketStatus } = useTicketStore();
     const [swipeX, setSwipeX] = useState(0);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
     const startX = useRef(0);
     const startY = useRef(0);
     const isSwiping = useRef(false);
     const isVerticalScroll = useRef(false);
     const SWIPE_THRESHOLD = 100;
+
+    // 외부 클릭 시 메뉴 닫기
+    useEffect(() => {
+        if (!menuOpen) return;
+        const close = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setMenuOpen(false);
+                setConfirmDelete(false);
+            }
+        };
+        document.addEventListener('click', close);
+        return () => document.removeEventListener('click', close);
+    }, [menuOpen]);
 
     const handleTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
         if (!canSwipe) return;
@@ -110,6 +128,38 @@ const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSel
                     {unreadCount > 0 && (
                         <span className="unread-badge">{unreadCount}</span>
                     )}
+                    {/* 더보기 버튼 */}
+                    <div className="ticket-menu-wrap" ref={menuRef}>
+                        <button
+                            className="ticket-menu-btn"
+                            onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v); setConfirmDelete(false); }}
+                            title="더보기"
+                        >
+                            <MoreVertical size={14} />
+                        </button>
+                        {menuOpen && (
+                            <div className="ticket-dropdown">
+                                {confirmDelete ? (
+                                    <div className="ticket-dropdown-confirm">
+                                        <span>정말 삭제할까요?</span>
+                                        <div className="ticket-dropdown-confirm-btns">
+                                            <button className="ticket-dropdown-del-confirm" onClick={(e) => { e.stopPropagation(); onDelete(ticket.id); setMenuOpen(false); }}>삭제</button>
+                                            <button className="ticket-dropdown-cancel" onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}>취소</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <button className="ticket-dropdown-item" onClick={(e) => { e.stopPropagation(); onEdit(ticket); setMenuOpen(false); }}>
+                                            <Pencil size={13} /> 수정
+                                        </button>
+                                        <button className="ticket-dropdown-item danger" onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}>
+                                            <Trash2 size={13} /> 삭제
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
                 <h3 className="ticket-title">{ticket.title}</h3>
                 <p className="ticket-desc">{ticket.description}</p>
@@ -119,16 +169,23 @@ const SwipeableTicketItem: React.FC<SwipeableTicketItemProps> = ({ ticket, isSel
 };
 
 export const TicketList: React.FC = () => {
-    const { tickets, activeTab, selectedTicketId, setSelectedTicketId, fetchTickets, createTicket, isLoadingData, unreadCounts } = useTicketStore();
+    const { tickets, activeTab, selectedTicketId, setSelectedTicketId, fetchTickets, createTicket, deleteTicket, updateTicket, isLoadingData, unreadCounts } = useTicketStore();
     const { user, currentWorkspace } = useAuthStore();
 
-    // Modal state
+    // 생성 모달 state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newTitle, setNewTitle] = useState('');
     const [newDesc, setNewDesc] = useState('');
     const [newPriority, setNewPriority] = useState<TicketPriority>('medium');
     const [newImage, setNewImage] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // 수정 모달 state
+    const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
+    const [editTitle, setEditTitle] = useState('');
+    const [editDesc, setEditDesc] = useState('');
+    const [editPriority, setEditPriority] = useState<TicketPriority>('medium');
+    const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
     // Search state
     const [searchQuery, setSearchQuery] = useState('');
@@ -179,6 +236,37 @@ export const TicketList: React.FC = () => {
             t.title.toLowerCase().includes(q) ||
             t.description.toLowerCase().includes(q)
         );
+
+    const handleEditOpen = (ticket: Ticket) => {
+        setEditingTicket(ticket);
+        setEditTitle(ticket.title);
+        setEditDesc(ticket.description);
+        setEditPriority(ticket.priority);
+    };
+
+    const handleEditSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingTicket || !editTitle.trim() || !editDesc.trim()) return;
+        setIsEditSubmitting(true);
+        try {
+            await updateTicket(editingTicket.id, { title: editTitle.trim(), description: editDesc.trim(), priority: editPriority });
+            setEditingTicket(null);
+        } catch (err) {
+            console.error('Update Ticket Error:', err);
+            alert('수정 실패. 다시 시도해주세요.');
+        } finally {
+            setIsEditSubmitting(false);
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        try {
+            await deleteTicket(id);
+        } catch (err) {
+            console.error('Delete Ticket Error:', err);
+            alert('삭제 실패. 다시 시도해주세요.');
+        }
+    };
 
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -289,6 +377,8 @@ export const TicketList: React.FC = () => {
                             unreadCount={unreadCounts[ticket.id] ?? 0}
                             onSelect={() => setSelectedTicketId(ticket.id)}
                             canSwipe={activeTab === 'in_progress'}
+                            onEdit={handleEditOpen}
+                            onDelete={handleDelete}
                         />
                     ))
                 )}
@@ -376,6 +466,56 @@ export const TicketList: React.FC = () => {
                                 <button type="button" className="btn-cancel" onClick={() => setIsModalOpen(false)}>취소</button>
                                 <button type="submit" className="btn-submit" disabled={isSubmitting}>
                                     {isSubmitting ? '등록 중...' : '등록하기'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* 수정 모달 */}
+            {editingTicket && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h3>업무 수정</h3>
+                            <button className="icon-btn-close" onClick={() => setEditingTicket(null)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleEditSubmit} className="modal-form">
+                            <div className="form-group">
+                                <label>요청 제목</label>
+                                <input
+                                    type="text"
+                                    value={editTitle}
+                                    onChange={(e) => setEditTitle(e.target.value)}
+                                    required
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>우선 순위</label>
+                                <select value={editPriority} onChange={(e) => setEditPriority(e.target.value as TicketPriority)}>
+                                    <option value="low">낮음 (여유 시 처리)</option>
+                                    <option value="medium">보통 (일반 요청)</option>
+                                    <option value="high">높음 (빠른 처리 요망)</option>
+                                    <option value="urgent">긴급 (즉시 처리 및 장애)</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>상세 내용</label>
+                                <textarea
+                                    value={editDesc}
+                                    onChange={(e) => setEditDesc(e.target.value)}
+                                    rows={4}
+                                    required
+                                />
+                            </div>
+                            <div className="modal-actions">
+                                <button type="button" className="btn-cancel" onClick={() => setEditingTicket(null)}>취소</button>
+                                <button type="submit" className="btn-submit" disabled={isEditSubmitting}>
+                                    {isEditSubmitting ? '저장 중...' : '저장하기'}
                                 </button>
                             </div>
                         </form>

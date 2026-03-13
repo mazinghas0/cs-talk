@@ -183,10 +183,14 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
 
     deleteTicket: async (id) => {
         const prevTickets = get().tickets;
+        // 낙관적 업데이트: 티켓 + 관련 북마크 UI에서 즉시 제거
         set((state) => ({
             tickets: state.tickets.filter(t => t.id !== id),
-            selectedTicketId: state.selectedTicketId === id ? null : state.selectedTicketId
+            selectedTicketId: state.selectedTicketId === id ? null : state.selectedTicketId,
+            bookmarks: state.bookmarks.filter(b => b.ticket_id !== id),
         }));
+        // 북마크 먼저 삭제 후 티켓 삭제 (FK 제약 방어)
+        await supabase.from('message_bookmarks').delete().eq('ticket_id', id);
         const { error } = await supabase.from('tickets').delete().eq('id', id);
         if (error) {
             console.error('Error deleting ticket:', error);

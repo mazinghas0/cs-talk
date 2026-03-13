@@ -2,6 +2,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+    min-height: 0;
 }
 
 .ticket-list-header {
@@ -342,4 +343,118 @@
 
 .search-clear-btn:hover {
     color: var(--text-primary);
+}
+
+/* 티켓 더보기 메뉴 */
+.ticket-menu-wrap {
+    position: relative;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.ticket-menu-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 2px 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+.ticket-item:hover .ticket-menu-btn,
+.ticket-item.selected .ticket-menu-btn {
+    opacity: 1;
+}
+
+.ticket-menu-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover, rgba(255,255,255,0.06));
+}
+
+.ticket-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: var(--bg-secondary, #1e1e2e);
+    border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 100;
+    min-width: 110px;
+    overflow: hidden;
+}
+
+.ticket-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 9px 14px;
+    font-size: 13px;
+    color: var(--text-primary, #e2e8f0);
+    transition: background 0.15s;
+    text-align: left;
+}
+
+.ticket-dropdown-item:hover {
+    background: var(--bg-hover, rgba(255,255,255,0.06));
+}
+
+.ticket-dropdown-item.danger {
+    color: #f87171;
+}
+
+.ticket-dropdown-item.danger:hover {
+    background: rgba(248, 113, 113, 0.1);
+}
+
+.ticket-dropdown-confirm {
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ticket-dropdown-confirm span {
+    font-size: 12px;
+    color: var(--text-secondary, #94a3b8);
+}
+
+.ticket-dropdown-confirm-btns {
+    display: flex;
+    gap: 6px;
+}
+
+.ticket-dropdown-del-confirm {
+    flex: 1;
+    background: #f87171;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.ticket-dropdown-del-confirm:hover {
+    opacity: 0.85;
+}
+
+.ticket-dropdown-cancel {
+    flex: 1;
+    background: var(--bg-hover, rgba(255,255,255,0.06));
+    color: var(--text-secondary, #94a3b8);
+    border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+    border-radius: 6px;
+    padding: 5px 0;
+    font-size: 12px;
+    cursor: pointer;
 }
