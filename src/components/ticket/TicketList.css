@@ -87,9 +87,9 @@
 
 .ticket-item-wrapper {
     position: relative;
-    overflow: hidden;
     border-radius: 12px;
     margin-bottom: 0.75rem;
+    flex-shrink: 0;
 }
 
 .swipe-bg {
