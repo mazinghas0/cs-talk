@@ -11,6 +11,7 @@ import { useTicketStore } from '../../store/ticketStore';
 import { useAuthStore } from '../../store/authStore';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { DashboardPanel } from '../dashboard/DashboardPanel';
+import { subscribeUserToPush } from '../../utils/pushNotification';
 
 export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
@@ -35,13 +36,6 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
         () => typeof Notification !== 'undefined' && Notification.permission === 'default' && !localStorage.getItem('cs_notif_banner_dismissed')
     );
 
-    const handleRequestNotif = async () => {
-        if (typeof Notification === 'undefined') return;
-        const result = await Notification.requestPermission();
-        setNotifPermission(result);
-        setShowNotifBanner(false);
-    };
-
     const dismissIOSBanner = () => {
         localStorage.setItem('cs_ios_banner_dismissed', '1');
         setShowIOSBanner(false);
@@ -57,7 +51,24 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
     const [joinError, setJoinError] = useState('');
     const [isJoining, setIsJoining] = useState(false);
     const { selectedTicketId, setSelectedTicketId, fetchTickets } = useTicketStore();
-    const { isAdmin, workspaces, currentWorkspace, isLoading, joinWorkspaceByCode, currentWorkspaceRole } = useAuthStore();
+    const { isAdmin, workspaces, currentWorkspace, isLoading, joinWorkspaceByCode, currentWorkspaceRole, user } = useAuthStore();
+
+    const handleRequestNotif = async () => {
+        if (typeof Notification === 'undefined') return;
+        const result = await Notification.requestPermission();
+        setNotifPermission(result);
+        setShowNotifBanner(false);
+        if (result === 'granted' && user) {
+            subscribeUserToPush(user.id);
+        }
+    };
+
+    // 이미 권한 허용된 경우 자동 구독 등록 (재방문/재설치 대응)
+    React.useEffect(() => {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && user) {
+            subscribeUserToPush(user.id);
+        }
+    }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const [isMobile, setIsMobile] = React.useState(
         () => window.matchMedia('(max-width: 1024px)').matches
