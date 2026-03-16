@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React from 'react';
 import './MainLayout.css';
 import { MessageSquare, UserCircle, Shield, Download, Layers, UserPlus, Loader2, ChevronLeft, ChevronRight, Sun, Moon, HelpCircle, BarChart2 } from 'lucide-react';
 import { TicketList } from '../ticket/TicketList';
@@ -11,236 +11,35 @@ import { useTicketStore } from '../../store/ticketStore';
 import { useAuthStore } from '../../store/authStore';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { DashboardPanel } from '../dashboard/DashboardPanel';
-import { subscribeUserToPush } from '../../utils/pushNotification';
+import { useLayoutState, STATUS_LABEL } from '../../hooks/useLayoutState';
 
 export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-    const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
-    const [isAdminOpen, setIsAdminOpen] = React.useState(false);
-    const [isWorkspaceOpen, setIsWorkspaceOpen] = React.useState(false);
-    const [isInviteOpen, setIsInviteOpen] = React.useState(false);
-    const [isShortcutsOpen, setIsShortcutsOpen] = React.useState(false);
-    const [isDashboardOpen, setIsDashboardOpen] = React.useState(false);
-
-    // iOS 설치 배너
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
-    const [showIOSBanner, setShowIOSBanner] = React.useState(
-        () => isIOS && !isStandalone && !localStorage.getItem('cs_ios_banner_dismissed')
-    );
-
-    // 알림 권한 배너
-    const [notifPermission, setNotifPermission] = React.useState<NotificationPermission | 'unsupported'>(
-        () => (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported')
-    );
-    const [showNotifBanner, setShowNotifBanner] = React.useState(
-        () => typeof Notification !== 'undefined' && Notification.permission === 'default' && !localStorage.getItem('cs_notif_banner_dismissed')
-    );
-
-    const dismissIOSBanner = () => {
-        localStorage.setItem('cs_ios_banner_dismissed', '1');
-        setShowIOSBanner(false);
-    };
-
-    const dismissNotifBanner = () => {
-        localStorage.setItem('cs_notif_banner_dismissed', '1');
-        setShowNotifBanner(false);
-    };
-    const [installPrompt, setInstallPrompt] = React.useState<Event | null>(null);
-    const [joinMode, setJoinMode] = useState<'select' | 'create' | 'code'>('select');
-    const [joinCode, setJoinCode] = useState('');
-    const [joinError, setJoinError] = useState('');
-    const [isJoining, setIsJoining] = useState(false);
     const { selectedTicketId, setSelectedTicketId, fetchTickets } = useTicketStore();
     const { isAdmin, workspaces, currentWorkspace, isLoading, joinWorkspaceByCode, currentWorkspaceRole, user } = useAuthStore();
 
-    const handleRequestNotif = async () => {
-        if (typeof Notification === 'undefined') return;
-        const result = await Notification.requestPermission();
-        setNotifPermission(result);
-        setShowNotifBanner(false);
-        if (result === 'granted' && user) {
-            subscribeUserToPush(user.id);
-        }
-    };
-
-    // 이미 권한 허용된 경우 자동 구독 등록 (재방문/재설치 대응)
-    React.useEffect(() => {
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && user) {
-            subscribeUserToPush(user.id);
-        }
-    }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    const [isMobile, setIsMobile] = React.useState(
-        () => window.matchMedia('(max-width: 1024px)').matches
-    );
-
-    // 패널 너비 상태 (데스크탑 전용)
-    const SIDEBAR_MIN = 60;
-    const SIDEBAR_MAX = 160;
-    const LIST_MIN = 200;
-    const LIST_MAX = 520;
-    const [sidebarWidth, setSidebarWidth] = useState(() => {
-        const saved = localStorage.getItem('cs_talk_sidebar_width');
-        return saved ? Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, parseInt(saved))) : 80;
+    const {
+        isSettingsOpen, setIsSettingsOpen,
+        isAdminOpen, setIsAdminOpen,
+        isWorkspaceOpen, setIsWorkspaceOpen,
+        isInviteOpen, setIsInviteOpen,
+        isShortcutsOpen, setIsShortcutsOpen,
+        isDashboardOpen, setIsDashboardOpen,
+        showIOSBanner, dismissIOSBanner,
+        notifPermission, showNotifBanner, dismissNotifBanner, requestNotificationPermission,
+        installPrompt, triggerInstallPrompt,
+        joinMode, setJoinMode, joinCode, setJoinCode, joinError, isJoining, handleJoinByCode, resetJoinFlow,
+        isMobile, sidebarWidth, listWidth, isSidebarCollapsed, toggleSidebar,
+        draggingResizer, onResizerMouseDown,
+        isDarkMode, setIsDarkMode,
+        userStatus, cycleStatus,
+        showList, showChat, handleBack,
+    } = useLayoutState({
+        selectedTicketId,
+        setSelectedTicketId,
+        fetchTickets,
+        joinWorkspaceByCode,
+        userId: user?.id,
     });
-    const [listWidth, setListWidth] = useState(() => {
-        const saved = localStorage.getItem('cs_talk_list_width');
-        return saved ? Math.min(LIST_MAX, Math.max(LIST_MIN, parseInt(saved))) : 320;
-    });
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const sidebarWidthBeforeCollapse = useRef(80);
-
-    // 테마 토글
-    const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-        const saved = localStorage.getItem('cs_talk_theme');
-        return saved ? saved === 'dark' : true;
-    });
-
-    React.useEffect(() => {
-        document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
-        localStorage.setItem('cs_talk_theme', isDarkMode ? 'dark' : 'light');
-    }, [isDarkMode]);
-
-    type UserStatus = 'online' | 'away' | 'busy';
-    const STATUS_CYCLE: UserStatus[] = ['online', 'away', 'busy'];
-    const STATUS_LABEL: Record<UserStatus, string> = { online: '온라인', away: '자리비움', busy: '바쁨' };
-    const [userStatus, setUserStatus] = useState<UserStatus>(
-        () => (localStorage.getItem('cs_talk_status') as UserStatus) || 'online'
-    );
-    const cycleStatus = useCallback(() => {
-        setUserStatus(prev => {
-            const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(prev) + 1) % STATUS_CYCLE.length];
-            localStorage.setItem('cs_talk_status', next);
-            return next;
-        });
-    }, []);
-    const [draggingResizer, setDraggingResizer] = useState<'sidebar' | 'list' | null>(null);
-    const dragStartX = useRef(0);
-    const dragStartWidth = useRef(0);
-
-    const onResizerMouseDown = useCallback((e: React.MouseEvent, target: 'sidebar' | 'list') => {
-        e.preventDefault();
-        dragStartX.current = e.clientX;
-        dragStartWidth.current = target === 'sidebar' ? sidebarWidth : listWidth;
-        setDraggingResizer(target);
-
-        let finalWidth = dragStartWidth.current;
-
-        const onMouseMove = (ev: MouseEvent) => {
-            const delta = ev.clientX - dragStartX.current;
-            if (target === 'sidebar') {
-                finalWidth = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, dragStartWidth.current + delta));
-                setSidebarWidth(finalWidth);
-            } else {
-                finalWidth = Math.min(LIST_MAX, Math.max(LIST_MIN, dragStartWidth.current + delta));
-                setListWidth(finalWidth);
-            }
-        };
-
-        const onMouseUp = () => {
-            setDraggingResizer(null);
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-            document.body.style.userSelect = '';
-            document.body.style.cursor = '';
-            const key = target === 'sidebar' ? 'cs_talk_sidebar_width' : 'cs_talk_list_width';
-            localStorage.setItem(key, String(finalWidth));
-        };
-
-        document.body.style.userSelect = 'none';
-        document.body.style.cursor = 'col-resize';
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-    }, [sidebarWidth, listWidth]);
-
-    const handleSidebarToggle = useCallback(() => {
-        if (isSidebarCollapsed) {
-            setSidebarWidth(sidebarWidthBeforeCollapse.current);
-            setIsSidebarCollapsed(false);
-        } else {
-            sidebarWidthBeforeCollapse.current = sidebarWidth;
-            setSidebarWidth(0);
-            setIsSidebarCollapsed(true);
-        }
-    }, [isSidebarCollapsed, sidebarWidth]);
-
-    React.useEffect(() => {
-        const mq = window.matchMedia('(max-width: 1024px)');
-        const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-        mq.addEventListener('change', handler);
-
-        // PWA 설치 안내 프롬프트
-        const handleInstallPrompt = (e: Event) => {
-            e.preventDefault();
-            setInstallPrompt(e);
-        };
-        window.addEventListener('beforeinstallprompt', handleInstallPrompt);
-
-        const handleShortcutKey = (e: KeyboardEvent) => {
-            if (e.ctrlKey && e.key === '/') {
-                e.preventDefault();
-                setIsShortcutsOpen(v => !v);
-            }
-        };
-        window.addEventListener('keydown', handleShortcutKey);
-
-        return () => {
-            mq.removeEventListener('change', handler);
-            window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
-            window.removeEventListener('keydown', handleShortcutKey);
-        };
-    }, []);
-
-    // Android 시스템 뒤로가기: 채팅 열려있으면 목록으로, 아니면 기본 동작
-    React.useEffect(() => {
-        if (!isMobile) return;
-
-        if (selectedTicketId) {
-            // 채팅이 열릴 때 더미 히스토리 항목 추가 (뒤로가기 intercept용)
-            window.history.pushState({ chatOpen: true }, '');
-        }
-
-        const handlePopState = (_e: PopStateEvent) => {
-            if (selectedTicketId) {
-                // 뒤로가기 → 채팅 닫기
-                setSelectedTicketId(null);
-                // 히스토리 다시 추가해서 다음 뒤로가기도 intercept
-            }
-            // selectedTicketId가 없으면 기본 동작 (앱 이탈)
-        };
-
-        window.addEventListener('popstate', handlePopState);
-        return () => window.removeEventListener('popstate', handlePopState);
-    }, [isMobile, selectedTicketId, setSelectedTicketId]);
-
-    const handleInstallClick = async () => {
-        if (!installPrompt) return;
-        const prompt = installPrompt as BeforeInstallPromptEvent;
-        prompt.prompt();
-        const { outcome } = await prompt.userChoice;
-        if (outcome === 'accepted') {
-            setInstallPrompt(null);
-        }
-    };
-
-    const showList = !isMobile || !selectedTicketId;
-    const showChat = !isMobile || !!selectedTicketId;
-
-    const handleBack = () => setSelectedTicketId(null);
-
-    const handleJoinByCode = async () => {
-        if (!joinCode.trim()) return;
-        setIsJoining(true);
-        setJoinError('');
-        try {
-            await joinWorkspaceByCode(joinCode.trim());
-            await fetchTickets();
-        } catch (err) {
-            setJoinError(err instanceof Error ? err.message : '참여에 실패했습니다. 코드를 확인해주세요.');
-        } finally {
-            setIsJoining(false);
-        }
-    };
 
     // 워크스페이스가 없을 때 안내 화면
     if (!isLoading && workspaces.length === 0) {
@@ -295,7 +94,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                                     {isJoining ? <Loader2 size={16} className="spin" /> : '참여하기'}
                                 </button>
                             </div>
-                            <button className="btn-back-select" onClick={() => { setJoinMode('select'); setJoinError(''); setJoinCode(''); }}>← 뒤로</button>
+                            <button className="btn-back-select" onClick={resetJoinFlow}>← 뒤로</button>
                         </>
                     )}
                 </div>
@@ -321,7 +120,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                 <div className="install-banner notif-banner">
                     <span>새 메시지 알림을 받으시겠어요?</span>
                     <div className="banner-actions">
-                        <button className="banner-allow-btn" onClick={handleRequestNotif}>허용하기</button>
+                        <button className="banner-allow-btn" onClick={requestNotificationPermission}>허용하기</button>
                         <button className="banner-dismiss-btn" onClick={dismissNotifBanner}>✕</button>
                     </div>
                 </div>
@@ -355,7 +154,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                             <span className="sidebar-tooltip">팀원 초대</span>
                         </div>
                         {installPrompt && (
-                            <div className="sidebar-btn" onClick={handleInstallClick}>
+                            <div className="sidebar-btn" onClick={() => triggerInstallPrompt()}>
                                 <Download size={22} color="var(--text-secondary)" />
                                 <span className="sidebar-tooltip">앱 설치하기</span>
                             </div>
@@ -380,7 +179,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                             <span className="sidebar-tooltip">프로필 설정 ({STATUS_LABEL[userStatus]})</span>
                         </div>
                     </div>
-                    <div className="sidebar-collapse-btn" onClick={handleSidebarToggle}>
+                    <div className="sidebar-collapse-btn" onClick={toggleSidebar}>
                         {isSidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
                     </div>
                 </nav>
@@ -394,26 +193,17 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
 
             {/* 모바일 워크스페이스 전환 시트 */}
             {isMobile && isWorkspaceOpen && (
-                <div
-                    className="workspace-mobile-overlay"
-                    onClick={() => setIsWorkspaceOpen(false)}
-                >
-                    <div
-                        className="workspace-mobile-sheet"
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                <div className="workspace-mobile-overlay" onClick={() => setIsWorkspaceOpen(false)}>
+                    <div className="workspace-mobile-sheet" onClick={(e) => e.stopPropagation()}>
                         <p className="workspace-mobile-title">워크스페이스</p>
-                        <WorkspaceSwitcher
-                            horizontal
-                            onSelect={() => setIsWorkspaceOpen(false)}
-                        />
+                        <WorkspaceSwitcher horizontal onSelect={() => setIsWorkspaceOpen(false)} />
                     </div>
                 </div>
             )}
 
             {/* 사이드바 접혔을 때 펼치기 탭 */}
             {!isMobile && isSidebarCollapsed && (
-                <div className="sidebar-collapse-btn sidebar-expand-tab" onClick={handleSidebarToggle}>
+                <div className="sidebar-collapse-btn sidebar-expand-tab" onClick={toggleSidebar}>
                     <ChevronRight size={14} />
                 </div>
             )}
@@ -464,7 +254,7 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                         <span>초대</span>
                     </div>
                     {installPrompt && (
-                        <div className="nav-item" onClick={handleInstallClick}>
+                        <div className="nav-item" onClick={() => triggerInstallPrompt()}>
                             <Download size={22} />
                             <span>앱 설치</span>
                         </div>
@@ -491,11 +281,3 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
         </div>
     );
 };
-
-// PWA 설치 프롬프트 타입 (브라우저 표준 미포함이라 별도 선언)
-declare global {
-    interface BeforeInstallPromptEvent extends Event {
-        prompt(): Promise<void>;
-        userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-    }
-}
