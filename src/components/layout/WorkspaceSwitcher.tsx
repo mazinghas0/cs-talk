@@ -1,6 +1,6 @@
 import React from 'react';
 import './WorkspaceSwitcher.css';
-import { Plus, Check, X } from 'lucide-react';
+import { Plus, Check, X, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useTicketStore } from '../../store/ticketStore';
 import { Workspace } from '../../types/ticket';
@@ -41,7 +41,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
     showCreateOnly = false,
     showName = false,
 }) => {
-    const { workspaces, currentWorkspace, setCurrentWorkspace, createWorkspace, joinWorkspaceByCode } = useAuthStore();
+    const { workspaces, currentWorkspace, setCurrentWorkspace, createWorkspace, joinWorkspaceByCode, deleteWorkspace, user } = useAuthStore();
     const { fetchTickets, unreadCounts, tickets } = useTicketStore();
 
     // 현재 워크스페이스의 총 미읽음 수
@@ -53,6 +53,16 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
     const [joinCode, setJoinCode] = React.useState('');
     const [joinError, setJoinError] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
+
+    const handleDelete = async (e: React.MouseEvent, workspace: Workspace) => {
+        e.stopPropagation();
+        if (!window.confirm(`"${workspace.name}" 워크스페이스를 삭제하시겠습니까?\n\n모든 티켓과 채팅 기록이 영구 삭제됩니다.`)) return;
+        try {
+            await deleteWorkspace(workspace.id);
+        } catch {
+            alert('워크스페이스 삭제에 실패했습니다.');
+        }
+    };
 
     const handleSelect = (workspace: Workspace) => {
         setCurrentWorkspace(workspace);
@@ -113,29 +123,40 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
             {!showCreateOnly && workspaces.map((ws) => {
                 const color = getWorkspaceColor(ws.name);
                 const isActive = currentWorkspace?.id === ws.id;
+                const isOwner = ws.owner_id === user?.id;
                 return (
-                    <button
-                        key={ws.id}
-                        className={`workspace-item${isActive ? ' active' : ''}`}
-                        onClick={() => handleSelect(ws)}
-                        title={ws.name}
-                        style={{
-                            background: color,
-                            borderColor: isActive ? 'white' : color,
-                            boxShadow: isActive ? `0 0 0 2px ${color}, 0 4px 12px ${color}55` : `0 2px 8px ${color}44`,
-                            color: 'white',
-                        }}
-                    >
-                        <span className="ws-initial">{ws.name.substring(0, 1).toUpperCase()}</span>
-                        {showName && (
-                            <span className="ws-name-label">{ws.name}</span>
+                    <div key={ws.id} className="ws-item-wrap">
+                        <button
+                            className={`workspace-item${isActive ? ' active' : ''}`}
+                            onClick={() => handleSelect(ws)}
+                            title={ws.name}
+                            style={{
+                                background: color,
+                                borderColor: isActive ? 'white' : color,
+                                boxShadow: isActive ? `0 0 0 2px ${color}, 0 4px 12px ${color}55` : `0 2px 8px ${color}44`,
+                                color: 'white',
+                            }}
+                        >
+                            <span className="ws-initial">{ws.name.substring(0, 1).toUpperCase()}</span>
+                            {showName && (
+                                <span className="ws-name-label">{ws.name}</span>
+                            )}
+                            {isActive && currentWorkspaceUnread > 0 && (
+                                <span className="ws-unread-badge">
+                                    {currentWorkspaceUnread > 99 ? '99+' : currentWorkspaceUnread}
+                                </span>
+                            )}
+                        </button>
+                        {isOwner && (
+                            <button
+                                className="ws-delete-btn"
+                                onClick={(e) => handleDelete(e, ws)}
+                                title="워크스페이스 삭제"
+                            >
+                                <Trash2 size={10} />
+                            </button>
                         )}
-                        {isActive && currentWorkspaceUnread > 0 && (
-                            <span className="ws-unread-badge">
-                                {currentWorkspaceUnread > 99 ? '99+' : currentWorkspaceUnread}
-                            </span>
-                        )}
-                    </button>
+                    </div>
                 );
             })}
 

@@ -46,6 +46,7 @@ interface AuthStore {
     createWorkspace: (name: string) => Promise<void>;
     generateInviteCode: (workspaceId: string) => Promise<string>;
     joinWorkspaceByCode: (code: string) => Promise<Workspace>;
+    deleteWorkspace: (workspaceId: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -327,6 +328,26 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         }));
 
         return ws as Workspace;
+    },
+
+    deleteWorkspace: async (workspaceId) => {
+        const user = get().user;
+        const workspace = get().workspaces.find(w => w.id === workspaceId);
+        if (!user || !workspace) return;
+        if (workspace.owner_id !== user.id) throw new Error('워크스페이스 소유자만 삭제할 수 있습니다.');
+
+        const { error } = await supabase.from('workspaces').delete().eq('id', workspaceId);
+        if (error) throw error;
+
+        const remaining = get().workspaces.filter(w => w.id !== workspaceId);
+        const next = remaining[0] ?? null;
+        set({
+            workspaces: remaining,
+            currentWorkspace: next,
+            currentWorkspaceRole: next ? (get().workspaceRoles[next.id] ?? null) : null,
+            workspaceMembers: [],
+        });
+        if (next) get().fetchWorkspaceMembers(next.id);
     },
 
     createWorkspace: async (name) => {

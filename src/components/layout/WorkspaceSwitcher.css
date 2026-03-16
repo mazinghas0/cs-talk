@@ -44,6 +44,37 @@
     gap: 0.75rem;
 }
 
+.ws-item-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ws-delete-btn {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent-danger);
+    border: none;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 10;
+    padding: 0;
+}
+
+.ws-item-wrap:hover .ws-delete-btn {
+    opacity: 1;
+}
+
 .workspace-item {
     width: clamp(36px, 10vw, 44px);
     height: clamp(36px, 10vw, 44px);
