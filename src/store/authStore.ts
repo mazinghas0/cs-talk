@@ -336,8 +336,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         if (!user || !workspace) return;
         if (workspace.owner_id !== user.id) throw new Error('워크스페이스 소유자만 삭제할 수 있습니다.');
 
-        const { error } = await supabase.from('workspaces').delete().eq('id', workspaceId);
+        const { error, count } = await supabase
+            .from('workspaces')
+            .delete({ count: 'exact' })
+            .eq('id', workspaceId);
         if (error) throw error;
+        if (!count || count === 0) throw new Error('삭제 권한이 없거나 이미 삭제된 워크스페이스입니다.');
 
         const remaining = get().workspaces.filter(w => w.id !== workspaceId);
         const next = remaining[0] ?? null;
