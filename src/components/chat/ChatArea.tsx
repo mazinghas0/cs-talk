@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import './ChatArea.css';
 import { useTicketStore } from '../../store/ticketStore';
 import { useAuthStore } from '../../store/authStore';
@@ -12,7 +12,6 @@ import { MessageList } from './MessageList';
 import { ChatInputArea } from './ChatInputArea';
 import { supabase } from '../../lib/supabase';
 import { Message, TicketPriority } from '../../types/ticket';
-import html2canvas from 'html2canvas';
 
 interface ChatAreaProps {
     onBack?: () => void;
@@ -29,7 +28,7 @@ const PRIORITY_LABEL: Record<TicketPriority, string> = {
 export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
     const { tickets, selectedTicketId, messages, reactions, toggleReaction, sendMessage, deleteMessage, updateTicketStatus, deleteTicket, requestResolution, updateTicket, bookmarks, isBookmarkPanelOpen, setBookmarkPanelOpen, toggleBookmark, fetchBookmarks } = useTicketStore();
     const { user, workspaceMembers, currentWorkspaceRole } = useAuthStore();
-    const ticket = tickets.find(t => t.id === selectedTicketId);
+    const ticket = useMemo(() => tickets.find(t => t.id === selectedTicketId), [tickets, selectedTicketId]);
 
     const [newMessage, setNewMessage] = useState('');
     const [isInternal, setIsInternal] = useState(false);
@@ -181,6 +180,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
         const el = document.querySelector<HTMLElement>(`[data-msg-id="${msgId}"]`);
         if (!el) return;
         try {
+            const { default: html2canvas } = await import('html2canvas');
             const canvas = await html2canvas(el, { backgroundColor: null, scale: 2, useCORS: true, logging: false });
             const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
             if (!blob) return;

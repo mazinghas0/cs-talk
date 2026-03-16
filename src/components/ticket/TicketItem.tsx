@@ -15,14 +15,14 @@ export interface TicketItemProps {
     canDelete: boolean;
     canRestore: boolean;
     workspaceMembers: WorkspaceMemberProfile[];
-    onSelect: () => void;
+    onSelect: (id: string) => void;
     onEdit: (ticket: Ticket) => void;
     onDelete: (ticketId: string) => void;
     onRestore: (ticketId: string) => void;
     onResolve: (ticketId: string) => Promise<void>;
 }
 
-export const TicketItem: React.FC<TicketItemProps> = ({
+export const TicketItem: React.FC<TicketItemProps> = React.memo(({
     ticket, isSelected, unreadCount, canSwipe, canEdit, canDelete, canRestore,
     workspaceMembers, onSelect, onEdit, onDelete, onRestore, onResolve,
 }) => {
@@ -105,7 +105,7 @@ export const TicketItem: React.FC<TicketItemProps> = ({
             <div
                 className={`ticket-item ${isSelected ? 'selected' : ''}`}
                 style={{ transform: `translateX(${swipeX}px)`, zIndex: 1 }}
-                onClick={onSelect}
+                onClick={() => onSelect(ticket.id)}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
@@ -168,4 +168,4 @@ export const TicketItem: React.FC<TicketItemProps> = ({
             </div>
         </div>
     );
-};
+});

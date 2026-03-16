@@ -431,7 +431,6 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         const { currentWorkspace } = useAuthStore.getState();
         if (!currentWorkspace) return () => {};
 
-        console.log(`🔔 [Realtime] Subscribing to Workspace: ${currentWorkspace.name}...`);
 
         // 초기 구독 시 fetchTickets는 TicketList useEffect가 담당 — 재연결 시에만 동기화
         let isFirstSubscribe = true;
@@ -444,7 +443,6 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 table: 'tickets',
                 filter: `workspace_id=eq.${currentWorkspace.id}`
             }, async (payload) => {
-                console.log('📝 [Realtime] Ticket Change:', payload);
                 const { eventType, new: newTicket, old: oldTicket } = payload;
 
                 if (eventType === 'INSERT') {
@@ -599,7 +597,6 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 }
             })
             .subscribe((status) => {
-                console.log('📡 [Realtime] Status:', status);
                 if (status === 'SUBSCRIBED') {
                     set({ isSubscribed: true, realtimeChannel: channel });
                     if (isFirstSubscribe) {
@@ -623,7 +620,6 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
             });
 
         return () => {
-            console.log('🔕 [Realtime] Unsubscribing...');
             supabase.removeChannel(channel);
             // CHANNEL_ERROR 재구독으로 교체된 채널도 정리 (채널 누수 방지)
             const currentChannel = get().realtimeChannel;

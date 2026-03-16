@@ -24,7 +24,7 @@ interface MessageBubbleProps {
     onScrollToReply?: (msgId: string) => void;
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({
+export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
     msg, isMe, isInternalMsg, isContinued, isLastInGroup, senderName,
     replyPreview, reactions, currentUserId, onToggleReaction, onMenuOpen, onScrollToReply,
 }) => {
@@ -114,7 +114,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     )}
                     <p className="msg-text">{msg.content}</p>
                     {msg.image_url && (
-                        <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />
+                        <img src={msg.image_url} alt="첨부 이미지" className="attached-image" loading="lazy" />
                     )}
                     <span className="msg-time">{senderName} · {format(msgDate, 'a h:mm', { locale: ko })}</span>
                 </div>
@@ -138,7 +138,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 )}
                 <p className="msg-text">{msg.content}</p>
                 {msg.image_url && (
-                    <img src={msg.image_url} alt="첨부 이미지" className="attached-image" />
+                    <img src={msg.image_url} alt="첨부 이미지" className="attached-image" loading="lazy" />
                 )}
                 {isLastInGroup && (
                     <span className="msg-time">
@@ -150,4 +150,4 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             {reactionBadges}
         </div>
     );
-};
+});

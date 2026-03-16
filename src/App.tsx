@@ -1,12 +1,21 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import { MainLayout } from './components/layout/MainLayout'
 import { AuthView } from './components/auth/AuthView'
 import { OnboardingView } from './components/onboarding/OnboardingView'
-import { CustomerTicketView } from './components/customer/CustomerTicketView'
-import { JoinWorkspaceView } from './components/workspace/JoinWorkspaceView'
 import { useAuthStore } from './store/authStore'
 import { useTicketStore } from './store/ticketStore'
+
+const CustomerTicketView = lazy(() =>
+  import('./components/customer/CustomerTicketView').then(m => ({ default: m.CustomerTicketView }))
+)
+const JoinWorkspaceView = lazy(() =>
+  import('./components/workspace/JoinWorkspaceView').then(m => ({ default: m.JoinWorkspaceView }))
+)
+
+const PageLoading = () => (
+  <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-secondary)' }}>Loading...</div>
+)
 
 function AuthenticatedApp() {
   const { session, isLoading, initialize, profile, currentWorkspace } = useAuthStore()
@@ -59,8 +68,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/ticket/:ticketId" element={<CustomerTicketView />} />
-        <Route path="/join/:code" element={<JoinWorkspaceView />} />
+        <Route path="/ticket/:ticketId" element={<Suspense fallback={<PageLoading />}><CustomerTicketView /></Suspense>} />
+        <Route path="/join/:code" element={<Suspense fallback={<PageLoading />}><JoinWorkspaceView /></Suspense>} />
         <Route path="/*" element={<AuthenticatedApp />} />
       </Routes>
     </BrowserRouter>

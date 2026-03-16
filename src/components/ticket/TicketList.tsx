@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import './TicketList.css';
 import './TicketModal.css';
 import { useTicketStore } from '../../store/ticketStore';
@@ -83,14 +83,14 @@ export const TicketList: React.FC = () => {
 
     const activeFilterCount = (filterPriority ? 1 : 0) + (filterTags.length > 0 ? 1 : 0);
 
-    const handleEditOpen = (ticket: Ticket) => {
+    const handleEditOpen = useCallback((ticket: Ticket) => {
         setEditingTicket(ticket);
         setEditTitle(ticket.title);
         setEditDesc(ticket.description);
         setEditPriority(ticket.priority);
         setEditTags(ticket.tags ?? []);
         setEditAssigneeId(ticket.assignee_id ?? '');
-    };
+    }, []);
 
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -113,31 +113,31 @@ export const TicketList: React.FC = () => {
         }
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = useCallback(async (id: string) => {
         try {
             await deleteTicket(id);
         } catch (err) {
             console.error('Delete Ticket Error:', err);
             alert('삭제 실패. 다시 시도해주세요.');
         }
-    };
+    }, [deleteTicket]);
 
-    const handleRestore = async (id: string) => {
+    const handleRestore = useCallback(async (id: string) => {
         try {
             await updateTicketStatus(id, 'in_progress');
         } catch (err) {
             console.error('Restore Ticket Error:', err);
             alert('원복 실패. 다시 시도해주세요.');
         }
-    };
+    }, [updateTicketStatus]);
 
-    const handleResolve = async (id: string) => {
+    const handleResolve = useCallback(async (id: string) => {
         try {
             await updateTicketStatus(id, 'resolved');
         } catch (err) {
             console.error('Resolve Ticket Error:', err);
         }
-    };
+    }, [updateTicketStatus]);
 
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -217,7 +217,7 @@ export const TicketList: React.FC = () => {
                                 canDelete={isCreator || isLeader}
                                 canRestore={(isCreator || isLeader) && activeTab === 'resolved'}
                                 workspaceMembers={workspaceMembers}
-                                onSelect={() => setSelectedTicketId(ticket.id)}
+                                onSelect={setSelectedTicketId}
                                 onEdit={handleEditOpen}
                                 onDelete={handleDelete}
                                 onRestore={handleRestore}
