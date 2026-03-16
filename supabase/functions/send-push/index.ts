@@ -109,7 +109,16 @@ Deno.serve(async (req: Request) => {
         webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
           payload
-        )
+        ).catch(async (err) => {
+          // 만료된 구독(410 Gone)은 DB에서 자동 삭제
+          if (err?.statusCode === 410 || err?.statusCode === 404) {
+            await fetch(`${apiBase}/push_subscriptions?endpoint=eq.${encodeURIComponent(sub.endpoint)}`, {
+              method: 'DELETE',
+              headers: authHeader,
+            });
+          }
+          throw err;
+        })
       )
     );
 
