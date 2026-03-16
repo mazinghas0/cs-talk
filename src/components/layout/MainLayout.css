@@ -4,10 +4,10 @@
 .layout-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
     height: 100dvh;
     width: 100vw;
     overflow: hidden;
+    padding-top: env(safe-area-inset-top, 0px);
     background-image:
         radial-gradient(circle at top right, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
         radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
