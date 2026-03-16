@@ -49,11 +49,12 @@ Deno.serve(async (req: Request) => {
       // 새 메시지 → 같은 워크스페이스 멤버 (발송자 제외)
       const ticketRes = await fetch(`${apiBase}/tickets?id=eq.${record.ticket_id}&select=workspace_id,title`, { headers: authHeader });
       const tickets = await ticketRes.json();
-      if (!tickets[0]) return new Response('ok', { headers: corsHeaders });
+      if (!Array.isArray(tickets) || !tickets[0]) return new Response('ok', { headers: corsHeaders });
 
       const wsId = tickets[0].workspace_id;
       const membersRes = await fetch(`${apiBase}/workspace_members?workspace_id=eq.${wsId}&select=user_id`, { headers: authHeader });
       const members = await membersRes.json();
+      if (!Array.isArray(members)) return new Response('ok', { headers: corsHeaders });
 
       recipientUserIds = members
         .map((m: { user_id: string }) => m.user_id)
@@ -67,6 +68,7 @@ Deno.serve(async (req: Request) => {
       // 신규 티켓 → 워크스페이스 멤버 (등록자 제외)
       const membersRes = await fetch(`${apiBase}/workspace_members?workspace_id=eq.${record.workspace_id}&select=user_id`, { headers: authHeader });
       const members = await membersRes.json();
+      if (!Array.isArray(members)) return new Response('ok', { headers: corsHeaders });
 
       recipientUserIds = members
         .map((m: { user_id: string }) => m.user_id)
@@ -96,7 +98,9 @@ Deno.serve(async (req: Request) => {
       `${apiBase}/push_subscriptions?user_id=in.(${idsParam})&select=endpoint,p256dh,auth`,
       { headers: authHeader }
     );
-    const subscriptions: PushSubscription[] = await subsRes.json();
+    const subsData = await subsRes.json();
+    if (!Array.isArray(subsData)) return new Response(JSON.stringify({ sent: 0 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const subscriptions: PushSubscription[] = subsData;
 
     const payload = JSON.stringify({ title: notifTitle, body: notifBody, tag: notifTag, url: '/' });
 
