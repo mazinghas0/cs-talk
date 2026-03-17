@@ -199,3 +199,76 @@
     opacity: 0.6;
     cursor: not-allowed;
 }
+
+/* 다중 이미지 썸네일 그리드 (모달 내부) */
+.image-thumbnail-grid {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.image-thumbnail-item {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+    flex-shrink: 0;
+}
+
+.image-thumbnail-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-thumbnail-remove {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    background: rgba(0, 0, 0, 0.65);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.image-limit-notice {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 4px 0 0;
+}
+
+/* 채팅방 티켓 이미지 그리드 */
+.attached-image-grid {
+    display: grid;
+    gap: 4px;
+    margin-top: 8px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.attached-image-grid.count-1 {
+    grid-template-columns: 1fr;
+}
+
+.attached-image-grid.count-2 {
+    grid-template-columns: 1fr 1fr;
+}
+
+.attached-image-grid.count-3 {
+    grid-template-columns: 1fr 1fr;
+}
+
+.attached-image-grid.count-3 .attached-image:first-child {
+    grid-column: 1 / -1;
+}

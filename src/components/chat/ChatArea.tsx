@@ -397,6 +397,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onBack, showBack }) => {
                 ticketDescription={ticket.description}
                 ticketCreatedAt={ticket.created_at}
                 ticketImageUrl={ticket.image_url}
+                ticketImageUrls={ticket.image_urls}
                 requestingUserId={ticket.requesting_user_id}
                 messages={messages}
                 reactions={reactions}

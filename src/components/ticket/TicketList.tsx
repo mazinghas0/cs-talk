@@ -23,7 +23,7 @@ export const TicketList: React.FC = () => {
     const [newTitle, setNewTitle] = useState('');
     const [newDesc, setNewDesc] = useState('');
     const [newPriority, setNewPriority] = useState<TicketPriority>('medium');
-    const [newImage, setNewImage] = useState<File | null>(null);
+    const [newImages, setNewImages] = useState<File[]>([]);
     const [newTags, setNewTags] = useState<string[]>([]);
     const [newAssigneeId, setNewAssigneeId] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -145,11 +145,11 @@ export const TicketList: React.FC = () => {
         if (!user || !newTitle.trim() || !newDesc.trim()) return;
         setIsSubmitting(true);
         try {
-            let imageUrl = undefined;
-            if (newImage) imageUrl = await useTicketStore.getState().uploadImage(newImage);
-            await createTicket(newTitle, newDesc, newPriority, user.id, currentWorkspace.id, imageUrl, newTags, newAssigneeId || undefined);
+            let imageUrls: string[] = [];
+            if (newImages.length > 0) imageUrls = await useTicketStore.getState().uploadImages(newImages);
+            await createTicket(newTitle, newDesc, newPriority, user.id, currentWorkspace.id, imageUrls, newTags, newAssigneeId || undefined);
             setIsModalOpen(false);
-            setNewTitle(''); setNewDesc(''); setNewPriority('medium'); setNewImage(null); setNewTags([]); setNewAssigneeId('');
+            setNewTitle(''); setNewDesc(''); setNewPriority('medium'); setNewImages([]); setNewTags([]); setNewAssigneeId('');
         } catch (err: unknown) {
             console.error('Create Ticket Error:', err);
             const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류';
@@ -235,7 +235,7 @@ export const TicketList: React.FC = () => {
                 priority={newPriority}
                 tags={newTags}
                 assigneeId={newAssigneeId}
-                image={newImage}
+                images={newImages}
                 isSubmitting={isSubmitting}
                 ticketTags={TICKET_TAGS}
                 workspaceMembers={workspaceMembers}
@@ -246,7 +246,7 @@ export const TicketList: React.FC = () => {
                 onPriorityChange={setNewPriority}
                 onTagToggle={(tag) => setNewTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
                 onAssigneeChange={setNewAssigneeId}
-                onImageChange={setNewImage}
+                onImagesChange={setNewImages}
             />
 
             <TicketEditModal

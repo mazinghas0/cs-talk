@@ -9,6 +9,7 @@ export interface Ticket {
     status: TicketStatus;
     priority: TicketPriority;
     image_url?: string;
+    image_urls?: string[];
     pin?: string; // 고객 접근용 핀 추가
     created_at: string;
     updated_at: string;

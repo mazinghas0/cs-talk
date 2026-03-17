@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { X } from 'lucide-react';
 import { TicketPriority } from '../../types/ticket';
 import { WorkspaceMemberProfile } from '../../store/authStore';
 import './TicketModal.css';
+
+const MAX_IMAGES = 3;
 
 export interface TicketCreateModalProps {
     isOpen: boolean;
@@ -11,7 +13,7 @@ export interface TicketCreateModalProps {
     priority: TicketPriority;
     tags: string[];
     assigneeId: string;
-    image: File | null;
+    images: File[];
     isSubmitting: boolean;
     ticketTags: string[];
     workspaceMembers: WorkspaceMemberProfile[];
@@ -22,11 +24,26 @@ export interface TicketCreateModalProps {
     onPriorityChange: (value: TicketPriority) => void;
     onTagToggle: (tag: string) => void;
     onAssigneeChange: (value: string) => void;
-    onImageChange: (file: File | null) => void;
+    onImagesChange: (files: File[]) => void;
 }
 
 export const TicketCreateModal: React.FC<TicketCreateModalProps> = (props) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     if (!props.isOpen) return null;
+
+    const addFiles = (incoming: FileList | File[]) => {
+        const newFiles = Array.from(incoming).filter(f => f.type.startsWith('image/'));
+        const merged = [...props.images, ...newFiles].slice(0, MAX_IMAGES);
+        props.onImagesChange(merged);
+    };
+
+    const removeImage = (idx: number) => {
+        const updated = props.images.filter((_, i) => i !== idx);
+        props.onImagesChange(updated);
+        // 같은 파일 재선택 가능하도록 input 초기화
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
 
     return (
         <div className="modal-overlay">
@@ -35,18 +52,19 @@ export const TicketCreateModal: React.FC<TicketCreateModalProps> = (props) => {
                 onPaste={(e) => {
                     const items = e.clipboardData?.items;
                     if (!items) return;
+                    const files: File[] = [];
                     for (let i = 0; i < items.length; i++) {
                         if (items[i].type.indexOf('image') !== -1) {
                             const file = items[i].getAsFile();
-                            if (file) { props.onImageChange(file); e.preventDefault(); break; }
+                            if (file) files.push(file);
                         }
                     }
+                    if (files.length > 0) { addFiles(files); e.preventDefault(); }
                 }}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                     e.preventDefault();
-                    const file = e.dataTransfer.files?.[0];
-                    if (file && file.type.startsWith('image/')) props.onImageChange(file);
+                    if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
                 }}
             >
                 <div className="modal-header">
@@ -95,13 +113,38 @@ export const TicketCreateModal: React.FC<TicketCreateModalProps> = (props) => {
                         </div>
                     )}
                     <div className="form-group">
-                        <label>첨부 이미지 (사진 선택, 캡처 붙여넣기, 또는 드래그 앤 드롭)</label>
-                        {props.image && (
-                            <div className="image-preview" style={{ marginBottom: '8px', fontSize: '0.85rem', color: 'var(--accent-success)' }}>
-                                ✅ 이미지 첨부됨: {props.image.name}
+                        <label>
+                            첨부 이미지 (최대 {MAX_IMAGES}장 · 사진 선택, 캡처 붙여넣기, 드래그 앤 드롭)
+                        </label>
+                        {props.images.length > 0 && (
+                            <div className="image-thumbnail-grid">
+                                {props.images.map((file, idx) => (
+                                    <div key={idx} className="image-thumbnail-item">
+                                        <img src={URL.createObjectURL(file)} alt={`첨부 ${idx + 1}`} className="image-thumbnail-preview" />
+                                        <button
+                                            type="button"
+                                            className="image-thumbnail-remove"
+                                            onClick={() => removeImage(idx)}
+                                            aria-label="이미지 제거"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
                         )}
-                        <input type="file" accept="image/*" onChange={(e) => props.onImageChange(e.target.files?.[0] || null)} />
+                        {props.images.length < MAX_IMAGES && (
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={(e) => { if (e.target.files) addFiles(e.target.files); }}
+                            />
+                        )}
+                        {props.images.length >= MAX_IMAGES && (
+                            <p className="image-limit-notice">최대 {MAX_IMAGES}장까지 첨부할 수 있습니다.</p>
+                        )}
                     </div>
                     <div className="modal-actions">
                         <button type="button" className="btn-cancel" onClick={props.onClose}>취소</button>

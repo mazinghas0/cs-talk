@@ -34,7 +34,7 @@ interface TicketStore {
     fetchTickets: () => Promise<void>;
     fetchUnreadCounts: () => Promise<void>;
     markAsRead: (ticketId: string) => Promise<void>;
-    createTicket: (title: string, description: string, priority: TicketPriority, userId: string, workspaceId: string, imageUrl?: string, tags?: string[], assigneeId?: string) => Promise<void>;
+    createTicket: (title: string, description: string, priority: TicketPriority, userId: string, workspaceId: string, imageUrls?: string[], tags?: string[], assigneeId?: string) => Promise<void>;
     updateTicketStatus: (id: string, status: TicketStatus) => Promise<void>;
     deleteTicket: (id: string) => Promise<void>;
     updateTicket: (id: string, updates: Partial<Ticket>) => Promise<void>;
@@ -48,6 +48,7 @@ interface TicketStore {
     sendMessage: (ticketId: string, content: string, userId: string, isInternal?: boolean, imageUrl?: string, replyToId?: string) => Promise<void>;
     deleteMessage: (messageId: string) => Promise<void>;
     uploadImage: (file: File) => Promise<string>;
+    uploadImages: (files: File[]) => Promise<string[]>;
     setActiveTab: (tab: TicketStatus) => void;
     setSelectedTicketId: (id: string | null) => void;
     subscribeToChanges: () => (() => void);
@@ -142,10 +143,10 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
         if (error) console.error('Error marking as read:', error);
     },
 
-    createTicket: async (title, description, priority, userId, workspaceId, imageUrl, tags = [], assigneeId) => {
+    createTicket: async (title, description, priority, userId, workspaceId, imageUrls, tags = [], assigneeId) => {
         const { data, error } = await supabase
             .from('tickets')
-            .insert([{ title, description, priority, requesting_user_id: userId, workspace_id: workspaceId, status: 'in_progress', image_url: imageUrl, tags, assignee_id: assigneeId ?? null }])
+            .insert([{ title, description, priority, requesting_user_id: userId, workspace_id: workspaceId, status: 'in_progress', image_url: imageUrls?.[0], image_urls: imageUrls ?? [], tags, assignee_id: assigneeId ?? null }])
             .select()
             .single();
 
@@ -393,6 +394,18 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 payload: { id: messageId, ticket_id: deletedMsg.ticket_id },
             });
         }
+    },
+
+    uploadImages: async (files: File[]) => {
+        const imageCompression = (await import('browser-image-compression')).default;
+        const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1920, useWebWorker: true };
+        const urls: string[] = [];
+        for (const file of files) {
+            const compressed = await imageCompression(file, options);
+            const url = await get().uploadImage(compressed);
+            urls.push(url);
+        }
+        return urls;
     },
 
     uploadImage: async (file: File) => {

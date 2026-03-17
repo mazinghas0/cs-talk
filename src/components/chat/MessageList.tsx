@@ -16,6 +16,7 @@ export interface MessageListProps {
   ticketDescription: string;
   ticketCreatedAt: string;
   ticketImageUrl?: string;
+  ticketImageUrls?: string[];
   requestingUserId: string;
   messages: Message[];
   reactions: Record<string, { id: string; user_id: string; emoji: string; created_at: string; message_id: string }[]>;
@@ -47,6 +48,7 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
     ticketDescription,
     ticketCreatedAt,
     ticketImageUrl,
+    ticketImageUrls,
     requestingUserId,
     messages,
     reactions,
@@ -83,7 +85,19 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
           }}
         >
           <p className="msg-text">{ticketDescription}</p>
-          {ticketImageUrl && <img src={ticketImageUrl} alt="첨부 이미지" className="attached-image" />}
+          {(() => {
+            const urls = ticketImageUrls && ticketImageUrls.length > 0
+              ? ticketImageUrls
+              : ticketImageUrl ? [ticketImageUrl] : [];
+            if (urls.length === 0) return null;
+            return (
+              <div className={`attached-image-grid count-${urls.length}`}>
+                {urls.map((url, i) => (
+                  <img key={i} src={url} alt={`첨부 이미지 ${i + 1}`} className="attached-image" loading="lazy" />
+                ))}
+              </div>
+            );
+          })()}
           <span className="msg-time">{format(new Date(ticketCreatedAt), 'a h:mm', { locale: ko })} (최초 요청)</span>
         </div>
       </div>
