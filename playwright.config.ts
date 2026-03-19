@@ -25,7 +25,8 @@ export default defineConfig({
   testDir: './tests',
   testIgnore: ['**/test_realtime.py', '**/screenshots/**'],
   timeout: 30_000,
-  fullyParallel: true,
+  fullyParallel: false,
+  workers: 1,
   globalSetup: './tests/global.setup.ts',
   use: {
     baseURL: 'https://cs-talk.pages.dev',
@@ -36,8 +37,16 @@ export default defineConfig({
   },
   projects: [
     {
+      // auth 테스트는 signIn/signOut으로 세션을 변경하므로 다른 테스트 이후 실행
+      name: 'auth-last',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: '**/auth.spec.ts',
+    },
+    {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testMatch: ['**/image.spec.ts', '**/message.spec.ts', '**/ticket.spec.ts'],
+      teardown: 'auth-last',
     },
   ],
 });

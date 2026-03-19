@@ -9,10 +9,15 @@ export async function loginAs(page: Page, email: string, password: string) {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
   const emailInput = page.locator(EMAIL_INPUT);
-  if (await emailInput.isVisible()) {
+  // 로그인 폼이 나타날 때까지 최대 10초 대기 (headless 모드에서 isVisible() 즉시 호출 시 miss 방지)
+  const loginRequired = await emailInput.waitFor({ state: 'visible', timeout: 10_000 }).then(() => true).catch(() => false);
+
+  if (loginRequired) {
     await emailInput.fill(email);
     await page.locator(PASSWORD_INPUT).fill(password);
     await page.locator(LOGIN_BUTTON).click();
+    // 로그인 버튼 클릭 후 폼이 사라질 때까지 대기 (SPA 라우팅 완료 신호)
+    await emailInput.waitFor({ state: 'hidden', timeout: 15_000 });
   }
 
   await expect(page.locator(MAIN_LAYOUT_SELECTOR).first()).toBeVisible({ timeout: 30_000 });

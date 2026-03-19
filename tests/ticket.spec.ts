@@ -37,9 +37,10 @@ test.describe('ticket', () => {
   test('티켓 완료 처리 및 원복', async ({ page }) => {
     await ensureAuthenticated(page);
 
-    // 첫 번째 진행 중 티켓 클릭
-    const firstTicket = page.locator('.ticket-item').first();
-    await expect(firstTicket).toBeVisible();
+    // 테스트용 티켓 생성 후 클릭 (목록이 비어있을 수 있으므로)
+    const title = `완료원복 테스트 ${Date.now()}`;
+    await createTicket(page, title, '완료/원복 테스트용 티켓');
+    const firstTicket = await waitForTicketInList(page, title);
     await firstTicket.click();
 
     // 완료 처리

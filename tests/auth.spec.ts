@@ -26,20 +26,10 @@ test.describe('auth', () => {
     await expect(errorAlert).toContainText(/invalid|credentials|password|로그인|인증/i);
   });
 
-  test('로그아웃 후 로그인 페이지 리다이렉트', async ({ browser }) => {
-    const context = await browser.newContext({
-      storageState: 'playwright/.auth/user.json',
-      baseURL: 'https://cs-talk.pages.dev',
-    });
-    const page = await context.newPage();
-
-    await page.goto('/');
-    if (await page.locator('input[type="email"]').isVisible()) {
-      await loginAs(page, TEST_EMAIL, TEST_PASSWORD);
-    }
-
+  test('로그아웃 후 로그인 페이지 리다이렉트', async ({ page }) => {
+    // 빈 상태에서 직접 로그인 (user.json 공유 토큰 무효화 방지 — 독립 세션 사용)
+    await loginAs(page, TEST_EMAIL, TEST_PASSWORD);
     await logout(page);
     await expect(page.locator('input[type="email"]')).toBeVisible();
-    await context.close();
   });
 });
