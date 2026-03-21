@@ -122,16 +122,16 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     },
 
     markAsRead: async (ticketId) => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const now = new Date().toISOString();
-
-        // 낙관적 업데이트 (화면 먼저 0으로 변경)
+        // 낙관적 업데이트 먼저 (getUser() 비동기 호출 전에 즉시 반영)
+        const prevCount = get().unreadCounts[ticketId] ?? 0;
         set((state) => ({
             unreadCounts: { ...state.unreadCounts, [ticketId]: 0 }
         }));
 
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const now = new Date().toISOString();
         const { error } = await supabase
             .from('profiles_tickets_reads')
             .upsert({
@@ -140,7 +140,13 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 last_read_at: now
             }, { onConflict: 'profile_id,ticket_id' });
 
-        if (error) console.error('Error marking as read:', error);
+        if (error) {
+            console.error('Error marking as read:', error);
+            // DB 실패 시 낙관적 업데이트 롤백
+            set((state) => ({
+                unreadCounts: { ...state.unreadCounts, [ticketId]: prevCount }
+            }));
+        }
     },
 
     createTicket: async (title, description, priority, userId, workspaceId, imageUrls, tags = [], assigneeId) => {
