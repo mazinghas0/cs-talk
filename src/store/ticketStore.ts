@@ -3,6 +3,7 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 import { Ticket, TicketStatus, TicketPriority, Message, MessageReaction, MessageBookmark } from '../types/ticket';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from './authStore';
+import { getNotifSettings, playNotificationSound } from '../utils/notificationSettings';
 
 // 실시간 메시지 이벤트 페이로드 타입 (profiles join 없이 DB 컬럼만)
 interface RealtimeMessagePayload {
@@ -471,12 +472,14 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                     });
                     // 내가 등록한 티켓이 아닐 때 알림
                     const { data: { user: u } } = await supabase.auth.getUser();
-                    if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && u && (newTicket as Ticket).requesting_user_id !== u.id) {
+                    const notifSettings1 = getNotifSettings();
+                    if (notifSettings1.enabled && typeof Notification !== 'undefined' && Notification.permission === 'granted' && u && (newTicket as Ticket).requesting_user_id !== u.id) {
                         new Notification('새 업무 요청이 등록됐습니다', {
                             body: (newTicket as Ticket).title,
                             icon: '/icon-192.png',
                             tag: `ticket-${(newTicket as Ticket).id}`,
                         });
+                        playNotificationSound();
                     }
                 } else if (eventType === 'UPDATE') {
                     set((state) => ({
@@ -486,12 +489,14 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                     const { data: { user: u } } = await supabase.auth.getUser();
                     const prev = oldTicket as Partial<Ticket>;
                     const next = newTicket as Ticket;
-                    if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && u && next.assignee_id === u.id && prev.assignee_id !== u.id) {
+                    const notifSettings2 = getNotifSettings();
+                    if (notifSettings2.enabled && typeof Notification !== 'undefined' && Notification.permission === 'granted' && u && next.assignee_id === u.id && prev.assignee_id !== u.id) {
                         new Notification('담당자로 배정됐습니다', {
                             body: next.title,
                             icon: '/icon-192.png',
                             tag: `assign-${next.id}`,
                         });
+                        playNotificationSound();
                     }
                 } else if (eventType === 'DELETE') {
                     set((state) => ({
@@ -507,13 +512,15 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 // 내 메시지가 아니고, 현재 보고 있는 티켓이 아니고, 알림 권한 있을 때만 발송
                 const isMyMessage = user && newMessage.user_id === user.id;
                 const isCurrentTicket = newMessage.ticket_id === get().selectedTicketId;
-                if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && !isMyMessage && !isCurrentTicket) {
+                const notifSettings = getNotifSettings();
+                if (notifSettings.enabled && typeof Notification !== 'undefined' && Notification.permission === 'granted' && !isMyMessage && !isCurrentTicket) {
                     const ticket = get().tickets.find(t => t.id === newMessage.ticket_id);
                     new Notification(`새 메시지 — ${ticket?.title ?? '업무 요청'}`, {
                         body: newMessage.content.length > 80 ? newMessage.content.slice(0, 80) + '…' : newMessage.content,
                         icon: '/icon-192.png',
                         tag: `msg-${newMessage.ticket_id}`,
                     });
+                    playNotificationSound();
                 }
 
                 if (newMessage.ticket_id === get().selectedTicketId) {

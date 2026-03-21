@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { X, Save, User as UserIcon, Bell, BellOff, LogOut, Camera } from 'lucide-react';
+import { X, Save, User as UserIcon, Bell, BellOff, LogOut, Camera, Volume2, VolumeX } from 'lucide-react';
 import { subscribeUserToPush } from '../../utils/pushNotification';
+import { getNotifSettings, saveNotifSettings, previewSound, SoundType } from '../../utils/notificationSettings';
 import './ProfileSettings.css';
 
 interface ProfileSettingsProps {
@@ -21,6 +22,9 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
     const [notifPermission, setNotifPermission] = useState<NotificationPermission>(
         typeof Notification !== 'undefined' ? Notification.permission : 'default'
     );
+    const [notifEnabled, setNotifEnabled] = useState(true);
+    const [soundEnabled, setSoundEnabled] = useState(true);
+    const [soundType, setSoundType] = useState<SoundType>('ding');
 
     useEffect(() => {
         if (profile) {
@@ -33,6 +37,11 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
         setAvatarPreview(null);
         setAvatarFile(null);
         setAvatarError(null);
+        // 알림 설정 로드
+        const s = getNotifSettings();
+        setNotifEnabled(s.enabled);
+        setSoundEnabled(s.soundEnabled);
+        setSoundType(s.soundType);
     }, [profile, isOpen]);
 
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,14 +163,16 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
 
                     <div className="form-group notification-group">
                         <label>시스템 알림 설정</label>
+
+                        {/* 브라우저 권한 상태 */}
                         <div className="notification-status-box">
                             <div className="status-info">
                                 {notifPermission === 'granted' ? (
-                                    <><Bell size={18} className="icon-granted" /> <span>알림 활성화됨</span></>
+                                    <><Bell size={18} className="icon-granted" /> <span>브라우저 알림 허용됨</span></>
                                 ) : notifPermission === 'denied' ? (
-                                    <><BellOff size={18} className="icon-denied" /> <span>알림 차단됨</span></>
+                                    <><BellOff size={18} className="icon-denied" /> <span>브라우저 알림 차단됨</span></>
                                 ) : (
-                                    <><Bell size={18} /> <span>알림 비활성화됨</span></>
+                                    <><Bell size={18} /> <span>브라우저 알림 미설정</span></>
                                 )}
                             </div>
                             {notifPermission !== 'granted' && (
@@ -170,14 +181,83 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
                                     className="btn-notif-request"
                                     onClick={requestNotificationPermission}
                                 >
-                                    알림 권한 요청
+                                    권한 요청
                                 </button>
                             )}
                         </div>
+
+                        {/* 앱 알림 on/off 토글 */}
+                        <div className="notif-toggle-row">
+                            <div className="notif-toggle-label">
+                                <Bell size={16} />
+                                <span>앱 알림</span>
+                                <p className="toggle-desc">새 메시지·티켓 알림 수신</p>
+                            </div>
+                            <button
+                                type="button"
+                                className={`toggle-switch${notifEnabled ? ' on' : ''}`}
+                                onClick={() => {
+                                    const next = !notifEnabled;
+                                    setNotifEnabled(next);
+                                    saveNotifSettings({ enabled: next });
+                                }}
+                            >
+                                <span className="toggle-knob" />
+                            </button>
+                        </div>
+
+                        {/* 알림음 on/off 토글 */}
+                        <div className="notif-toggle-row">
+                            <div className="notif-toggle-label">
+                                {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                                <span>알림음</span>
+                                <p className="toggle-desc">알림 수신 시 소리 재생</p>
+                            </div>
+                            <button
+                                type="button"
+                                className={`toggle-switch${soundEnabled ? ' on' : ''}`}
+                                onClick={() => {
+                                    const next = !soundEnabled;
+                                    setSoundEnabled(next);
+                                    saveNotifSettings({ soundEnabled: next });
+                                }}
+                            >
+                                <span className="toggle-knob" />
+                            </button>
+                        </div>
+
+                        {/* 알림음 종류 선택 */}
+                        {soundEnabled && (
+                            <div className="sound-picker">
+                                <p className="sound-picker-label">알림음 선택</p>
+                                <div className="sound-options">
+                                    {(['ding', 'pop', 'chime'] as SoundType[]).map((s) => (
+                                        <button
+                                            key={s}
+                                            type="button"
+                                            className={`sound-option${soundType === s ? ' selected' : ''}`}
+                                            onClick={() => {
+                                                setSoundType(s);
+                                                saveNotifSettings({ soundType: s });
+                                                previewSound(s);
+                                            }}
+                                        >
+                                            <span className="sound-icon">
+                                                {s === 'ding' ? '🔔' : s === 'pop' ? '💬' : '🎵'}
+                                            </span>
+                                            <span className="sound-name">
+                                                {s === 'ding' ? 'Ding' : s === 'pop' ? 'Pop' : 'Chime'}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <p className="input-helper">
                             {notifPermission === 'denied'
                                 ? '브라우저 설정에서 알림 권한을 직접 허용해야 합니다.'
-                                : '새 메시지가 도착했을 때 실시간 알림을 받습니다.'}
+                                : '설정은 이 기기에 저장됩니다.'}
                         </p>
                     </div>
 
