@@ -146,6 +146,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
             if (upserted) {
                 set({ profile: upserted as Profile, isAdmin: false });
+            } else {
+                console.error('fetchProfile: upsert 결과가 null — profile 생성 실패');
+                set({ profile: { id, email: get().user?.email ?? '', full_name: null, avatar_url: null, role: 'user' }, isAdmin: false });
             }
         }
     },

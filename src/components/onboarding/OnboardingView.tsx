@@ -23,13 +23,18 @@ export const OnboardingView: React.FC = () => {
 
         try {
             await updateProfile({ full_name: trimmed });
-            // 알림 권한 요청 (강제하지 않고 권장)
-            await requestNotificationPermission();
         } catch (err: any) {
             setError('저장에 실패했습니다. 다시 시도해주세요.');
-        } finally {
             setIsLoading(false);
+            return;
         }
+        // 프로필 저장 성공 후 알림 권한 요청 (실패해도 온보딩은 완료)
+        try {
+            await requestNotificationPermission();
+        } catch {
+            // 알림 권한 거부/에러는 무시
+        }
+        setIsLoading(false);
     };
 
     return (

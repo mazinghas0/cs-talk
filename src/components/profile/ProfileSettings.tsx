@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { X, Save, User as UserIcon, Bell, BellOff, LogOut } from 'lucide-react';
+import { subscribeUserToPush } from '../../utils/pushNotification';
 import './ProfileSettings.css';
 
 interface ProfileSettingsProps {
@@ -9,7 +10,7 @@ interface ProfileSettingsProps {
 }
 
 export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClose }) => {
-    const { profile, updateProfile, signOut } = useAuthStore();
+    const { profile, updateProfile, signOut, user } = useAuthStore();
     const [isSigningOut, setIsSigningOut] = useState(false);
     const [fullName, setFullName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -30,9 +31,11 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        const trimmed = fullName.trim();
+        if (!trimmed) return;
         setIsSaving(true);
         try {
-            await updateProfile({ full_name: fullName });
+            await updateProfile({ full_name: trimmed });
             onClose();
         } catch (error) {
             alert('프로필 저장에 실패했습니다.');
@@ -52,6 +55,9 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
                     body: '알림 설정이 완료되었습니다.',
                     icon: '/icon-192.png'
                 });
+                if (user?.id) {
+                    await subscribeUserToPush(user.id);
+                }
             }
         } catch (err) {
             console.error('Notification Error:', err);
