@@ -47,6 +47,7 @@ interface AuthStore {
     generateInviteCode: (workspaceId: string) => Promise<string>;
     joinWorkspaceByCode: (code: string) => Promise<Workspace>;
     deleteWorkspace: (workspaceId: string) => Promise<void>;
+    uploadAvatar: (file: File) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -377,5 +378,25 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         await get().fetchWorkspaces();
         // 새로 만든 워크스페이스를 현재 공간으로 설정
         set({ currentWorkspace: data as Workspace });
+    },
+
+    uploadAvatar: async (file) => {
+        const user = get().user;
+        if (!user) return;
+
+        const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+        const path = `${user.id}/avatar.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(path, file, { upsert: true, contentType: file.type });
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+        // 캐시 무효화를 위해 타임스탬프 쿼리 추가
+        const avatarUrl = `${data.publicUrl}?t=${Date.now()}`;
+
+        await get().updateProfile({ avatar_url: avatarUrl });
     },
 }));

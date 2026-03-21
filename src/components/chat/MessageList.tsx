@@ -111,6 +111,7 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
         const isInternalMsg = msg.is_internal_note;
         const isMe = msg.user_id === currentUserId;
         const senderName = msg.customer_name || msg.profiles?.full_name || msg.profiles?.email?.split('@')[0] || '익명';
+        const avatarUrl = msg.profiles?.avatar_url ?? null;
         const isContinued = !isInternalMsg && !!prevMsg && !prevMsg.is_internal_note && prevMsg.user_id === msg.user_id && !showDateDivider && isSameMinute(msgDate, new Date(prevMsg.created_at));
         const isLastInGroup = !nextMsg || nextMsg.is_internal_note || nextMsg.user_id !== msg.user_id || !isSameMinute(new Date(nextMsg.created_at), msgDate);
 
@@ -124,6 +125,7 @@ export const MessageList = forwardRef<HTMLDivElement, MessageListProps>(function
               isContinued={isInternalMsg ? false : isContinued}
               isLastInGroup={isInternalMsg ? true : isLastInGroup}
               senderName={senderName}
+              avatarUrl={avatarUrl}
               replyPreview={getReplyPreview(messages, msg)}
               reactions={reactions[msg.id]}
               currentUserId={currentUserId}

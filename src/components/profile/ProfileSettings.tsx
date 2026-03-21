@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { X, Save, User as UserIcon, Bell, BellOff, LogOut } from 'lucide-react';
+import { X, Save, User as UserIcon, Bell, BellOff, LogOut, Camera } from 'lucide-react';
 import { subscribeUserToPush } from '../../utils/pushNotification';
 import './ProfileSettings.css';
 
@@ -10,10 +10,14 @@ interface ProfileSettingsProps {
 }
 
 export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClose }) => {
-    const { profile, updateProfile, signOut, user } = useAuthStore();
+    const { profile, updateProfile, signOut, user, uploadAvatar } = useAuthStore();
     const [isSigningOut, setIsSigningOut] = useState(false);
     const [fullName, setFullName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [avatarError, setAvatarError] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [notifPermission, setNotifPermission] = useState<NotificationPermission>(
         typeof Notification !== 'undefined' ? Notification.permission : 'default'
     );
@@ -25,7 +29,23 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
         if (typeof Notification !== 'undefined') {
             setNotifPermission(Notification.permission);
         }
+        // 모달 열릴 때 프리뷰 초기화
+        setAvatarPreview(null);
+        setAvatarFile(null);
+        setAvatarError(null);
     }, [profile, isOpen]);
+
+    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) {
+            setAvatarError('파일 크기는 2MB 이하여야 합니다.');
+            return;
+        }
+        setAvatarError(null);
+        setAvatarFile(file);
+        setAvatarPreview(URL.createObjectURL(file));
+    };
 
     if (!isOpen) return null;
 
@@ -35,6 +55,9 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
         if (!trimmed) return;
         setIsSaving(true);
         try {
+            if (avatarFile) {
+                await uploadAvatar(avatarFile);
+            }
             await updateProfile({ full_name: trimmed });
             onClose();
         } catch (error) {
@@ -79,6 +102,38 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
 
 
                 <form onSubmit={handleSave} className="profile-form">
+                    {/* 아바타 업로드 */}
+                    <div className="avatar-upload-section">
+                        <div className="avatar-circle-wrap" onClick={() => fileInputRef.current?.click()}>
+                            {(avatarPreview || profile?.avatar_url) ? (
+                                <img
+                                    src={avatarPreview ?? profile?.avatar_url ?? ''}
+                                    alt="프로필 사진"
+                                    className="avatar-img"
+                                />
+                            ) : (
+                                <span className="avatar-initial">
+                                    {(profile?.full_name ?? profile?.email ?? '?').substring(0, 1).toUpperCase()}
+                                </span>
+                            )}
+                            <div className="avatar-overlay">
+                                <Camera size={18} />
+                            </div>
+                        </div>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            style={{ display: 'none' }}
+                            onChange={handleAvatarChange}
+                        />
+                        <div className="avatar-upload-info">
+                            <p className="avatar-upload-label">프로필 사진</p>
+                            <p className="input-helper">JPG, PNG, WebP (최대 2MB)</p>
+                            {avatarError && <p className="avatar-error">{avatarError}</p>}
+                        </div>
+                    </div>
+
                     <div className="form-group">
                         <label>이메일 계정</label>
                         <input type="text" value={profile?.email || ''} disabled className="disabled-input" />

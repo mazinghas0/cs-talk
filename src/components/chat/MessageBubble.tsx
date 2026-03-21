@@ -16,6 +16,7 @@ interface MessageBubbleProps {
     isContinued: boolean;
     isLastInGroup: boolean;
     senderName: string;
+    avatarUrl?: string | null;
     replyPreview?: ReplyPreview | null;
     reactions?: MessageReaction[];
     currentUserId?: string | null;
@@ -25,7 +26,7 @@ interface MessageBubbleProps {
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
-    msg, isMe, isInternalMsg, isContinued, isLastInGroup, senderName,
+    msg, isMe, isInternalMsg, isContinued, isLastInGroup, senderName, avatarUrl,
     replyPreview, reactions, currentUserId, onToggleReaction, onMenuOpen, onScrollToReply,
 }) => {
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -123,8 +124,20 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
         );
     }
 
+    // 상대방 메시지(왼쪽) 아바타: 그룹 첫 메시지에만 표시, 이후 연속 메시지는 공백으로 자리 유지
+    const avatarSlot = !isMe && !isInternalMsg ? (
+        <div className={`msg-avatar-slot${isContinued ? ' avatar-hidden' : ''}`}>
+            {!isContinued && (
+                avatarUrl
+                    ? <img src={avatarUrl} alt={senderName} className="msg-avatar-img" />
+                    : <div className="msg-avatar-initial">{senderName.substring(0, 1).toUpperCase()}</div>
+            )}
+        </div>
+    ) : null;
+
     return (
         <div className={`message-wrapper ${isMe ? 'admin-res' : 'user-req'} ${isContinued ? 'continued' : ''}`}>
+            {avatarSlot}
             <div
                 className={`message-bubble ${isMe ? 'res-bubble' : 'req-bubble'} ${isContinued ? 'bubble-continued' : ''}`}
                 data-msg-id={msg.id}

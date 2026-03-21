@@ -50,6 +50,83 @@
     gap: 1.5rem;
 }
 
+/* 아바타 업로드 */
+.avatar-upload-section {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px dashed var(--glass-border);
+}
+
+.avatar-circle-wrap {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    cursor: pointer;
+    flex-shrink: 0;
+    background: rgba(99, 102, 241, 0.2);
+    border: 2px solid rgba(99, 102, 241, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.avatar-circle-wrap:hover {
+    border-color: var(--accent-primary);
+}
+
+.avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-initial {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    user-select: none;
+}
+
+.avatar-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.avatar-circle-wrap:hover .avatar-overlay {
+    opacity: 1;
+}
+
+.avatar-upload-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.avatar-upload-label {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.avatar-error {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #f87171;
+}
+
 .form-group {
     display: flex;
     flex-direction: column;
