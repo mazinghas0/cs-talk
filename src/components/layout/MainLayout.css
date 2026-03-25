@@ -308,7 +308,7 @@
 }
 
 .sidebar-btn:hover {
-    background: rgba(255, 255, 255, 0.07);
+    background: var(--bg-hover, rgba(255, 255, 255, 0.07));
 }
 
 .sidebar-btn.active {
@@ -414,7 +414,7 @@
    TICKET LIST PANE
    =================================== */
 .pane-list {
-    background: rgba(20, 20, 20, 0.8);
+    background: var(--bg-list, rgba(20, 20, 20, 0.8));
     backdrop-filter: blur(8px);
     border-right: none;
     display: flex;
