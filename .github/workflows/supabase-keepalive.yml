@@ -1,0 +1,25 @@
+name: Supabase Keep-alive
+
+on:
+  schedule:
+    # 3일마다 실행 (UTC 기준 월/목 오전 9시 = 한국 오후 6시)
+    - cron: '0 0 */3 * *'
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase prod
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://xsnqesmfszadytziujuf.supabase.co/auth/v1/health)
+          echo "Prod 상태: $STATUS"
+          [ "$STATUS" = "200" ] && echo "Prod 정상" || echo "Prod 응답 이상"
+
+      - name: Ping Supabase dev
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://jyusmkrbmpnxyemrkskq.supabase.co/auth/v1/health)
+          echo "Dev 상태: $STATUS"
+          [ "$STATUS" = "200" ] && echo "Dev 정상" || echo "Dev 응답 이상"
