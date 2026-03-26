@@ -14,7 +14,6 @@ interface AdminPanelProps {
 export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const { user, allProfiles, fetchAllProfiles, updateUserRole, currentWorkspace, updateWorkspaceTags, currentWorkspaceRole } = useAuthStore();
     const canManageTags = currentWorkspaceRole === 'leader' || currentWorkspace?.owner_id === user?.id;
-    console.log('[TagDebug]', { currentWorkspaceRole, owner_id: currentWorkspace?.owner_id, userId: user?.id, canManageTags });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -37,7 +36,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         setIsSavingTag(true);
         setTagError(null);
         try {
-            await updateWorkspaceTags(currentWorkspace.id, [...currentTags, tag]);
+            await updateWorkspaceTags(currentWorkspace.id, [...new Set([...currentTags, tag])]);
             setNewTagInput('');
         } catch {
             setTagError('저장에 실패했습니다.');

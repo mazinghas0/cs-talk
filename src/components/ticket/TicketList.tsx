@@ -17,7 +17,7 @@ const DEFAULT_TAGS = ['출고', '배송', '반품', '환불', '교환', '재고'
 export const TicketList: React.FC = () => {
     const { tickets, activeTab, selectedTicketId, setSelectedTicketId, fetchTickets, createTicket, deleteTicket, updateTicket, updateTicketStatus, isLoadingData, unreadCounts } = useTicketStore();
     const { user, currentWorkspace, currentWorkspaceRole, workspaceMembers } = useAuthStore();
-    const ticketTags = currentWorkspace?.tags ?? DEFAULT_TAGS;
+    const ticketTags = [...new Set(currentWorkspace?.tags ?? DEFAULT_TAGS)];
 
     // 생성 모달 state
     const [isModalOpen, setIsModalOpen] = useState(false);
