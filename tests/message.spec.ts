@@ -49,12 +49,13 @@ test.describe('message', () => {
     // 메시지 전송
     const textarea = page.locator('.chat-input-area textarea').first();
     await expect(textarea).toBeVisible({ timeout: 10_000 });
+    await textarea.click();
     await textarea.fill('우클릭 테스트 메시지');
     await textarea.press('Enter');
 
-    // 메시지 버블 대기
+    // 메시지 버블 대기 (Realtime 지연 고려해 25초)
     const bubble = page.locator('.message-bubble').filter({ hasText: '우클릭 테스트 메시지' }).first();
-    await expect(bubble).toBeVisible({ timeout: 15_000 });
+    await expect(bubble).toBeVisible({ timeout: 25_000 });
 
     // 우클릭 → 컨텍스트 메뉴 오픈
     await bubble.click({ button: 'right' });
