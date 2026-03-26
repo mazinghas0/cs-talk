@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './ShareTicketModal.css';
-import { X, Copy, Check } from 'lucide-react';
+import { X, Copy, Check, Share2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Ticket } from '../../types/ticket';
 import { useTicketStore } from '../../store/ticketStore';
@@ -35,11 +35,29 @@ export const ShareTicketModal: React.FC<ShareTicketModalProps> = ({ ticket, isOp
         }
     };
 
+    const shareText = ticket.pin
+        ? `CS_talk 상담 링크: ${shareUrl}\n인증 PIN: ${ticket.pin}`
+        : `CS_talk 상담 링크: ${shareUrl}`;
+
     const handleCopy = () => {
-        navigator.clipboard.writeText(`상담 링크: ${shareUrl}\n인증 PIN: ${ticket.pin}`);
+        navigator.clipboard.writeText(shareText);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
+
+    const handleWebShare = async () => {
+        await navigator.share({ title: ticket.title, text: shareText, url: shareUrl });
+    };
+
+    const handleTelegram = () => {
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`, '_blank');
+    };
+
+    const handleGmail = () => {
+        window.open(`https://mail.google.com/mail/?view=cm&su=${encodeURIComponent(`[CS_talk] ${ticket.title}`)}&body=${encodeURIComponent(shareText)}`, '_blank');
+    };
+
+    const canWebShare = typeof navigator.share === 'function';
 
     return (
         <div className="modal-overlay">
@@ -92,6 +110,26 @@ export const ShareTicketModal: React.FC<ShareTicketModalProps> = ({ ticket, isOp
                             <p>고객이 QR 코드를 스캔하면 바로 접속합니다.</p>
                         </div>
                     )}
+                </div>
+
+                <div className="share-section">
+                    <label>바로 공유하기</label>
+                    <div className="share-btn-grid">
+                        {canWebShare && (
+                            <button className="share-app-btn share-native" onClick={handleWebShare}>
+                                <Share2 size={18} />
+                                <span>공유</span>
+                            </button>
+                        )}
+                        <button className="share-app-btn share-telegram" onClick={handleTelegram}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.18 14.367l-2.965-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.641.219z"/></svg>
+                            <span>텔레그램</span>
+                        </button>
+                        <button className="share-app-btn share-gmail" onClick={handleGmail}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.908 1.528-1.147C21.69 2.28 24 3.434 24 5.457z"/></svg>
+                            <span>Gmail</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div className="modal-actions">
