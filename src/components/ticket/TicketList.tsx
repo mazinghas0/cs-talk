@@ -187,7 +187,7 @@ export const TicketList: React.FC = () => {
                 onToggleBar={() => setShowFilterBar(v => !v)}
                 onReset={() => { setFilterPriority(null); setFilterTags([]); }}
                 onPriorityChange={(p) => setFilterPriority(prev => prev === p ? null : p)}
-                onTagToggle={(tag) => setFilterTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
+                onTagToggle={(tag) => setFilterTags(prev => prev.includes(tag) ? [] : [tag])}
             />
 
             {pullDistance > 0 && (
@@ -245,7 +245,7 @@ export const TicketList: React.FC = () => {
                 onTitleChange={setNewTitle}
                 onDescriptionChange={setNewDesc}
                 onPriorityChange={setNewPriority}
-                onTagToggle={(tag) => setNewTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
+                onTagToggle={(tag) => setNewTags(prev => prev.includes(tag) ? [] : [tag])}
                 onAssigneeChange={setNewAssigneeId}
                 onImagesChange={setNewImages}
             />
@@ -265,7 +265,7 @@ export const TicketList: React.FC = () => {
                 onTitleChange={setEditTitle}
                 onDescriptionChange={setEditDesc}
                 onPriorityChange={setEditPriority}
-                onTagToggle={(tag) => setEditTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
+                onTagToggle={(tag) => setEditTags(prev => prev.includes(tag) ? [] : [tag])}
                 onAssigneeChange={setEditAssigneeId}
             />
         </div>
