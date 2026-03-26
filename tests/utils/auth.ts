@@ -20,6 +20,13 @@ export async function loginAs(page: Page, email: string, password: string) {
     await emailInput.waitFor({ state: 'hidden', timeout: 15_000 });
   }
 
+  // 투어 모달이 남아있으면 닫기 (storageState에 플래그 없는 경우 방어)
+  const tourOverlay = page.locator('.tour-overlay');
+  if (await tourOverlay.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    await page.locator('.tour-skip').click();
+    await tourOverlay.waitFor({ state: 'hidden', timeout: 5_000 });
+  }
+
   await expect(page.locator(MAIN_LAYOUT_SELECTOR).first()).toBeVisible({ timeout: 30_000 });
 }
 

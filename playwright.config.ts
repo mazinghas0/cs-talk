@@ -45,7 +45,7 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testMatch: ['**/image.spec.ts', '**/message.spec.ts', '**/ticket.spec.ts'],
+      testMatch: ['**/image.spec.ts', '**/message.spec.ts', '**/ticket.spec.ts', '**/tour.spec.ts'],
       teardown: 'auth-last',
     },
   ],

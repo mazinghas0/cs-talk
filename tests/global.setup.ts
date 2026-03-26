@@ -40,6 +40,8 @@ async function globalSetup(config: FullConfig) {
   });
 
   await loginAs(page, email, password);
+  // 투어 모달이 테스트를 막지 않도록 완료 플래그 설정
+  await page.evaluate(() => localStorage.setItem('cs_talk_tour_done', '1'));
   await page.context().storageState({ path: storageStatePath });
   await browser.close();
 }
