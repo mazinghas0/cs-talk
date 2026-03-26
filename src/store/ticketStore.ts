@@ -228,7 +228,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
     fetchMessages: async (ticketId) => {
         const { data, error } = await supabase
             .from('messages')
-            .select(`*, profiles:user_id(full_name, email)`)
+            .select(`*, profiles:user_id(full_name, email, avatar_url)`)
             .eq('ticket_id', ticketId)
             .order('created_at', { ascending: true });
 
@@ -350,7 +350,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                 image_url: imageUrl,
                 thread_parent_id: replyToId ?? null,
             }])
-            .select(`*, profiles:user_id(full_name, email)`)
+            .select(`*, profiles:user_id(full_name, email, avatar_url)`)
             .single();
 
         if (error) {
@@ -541,7 +541,7 @@ export const useTicketStore = create<TicketStore>((set, get) => ({
                     if (newMessage.user_id) {
                         const { data } = await supabase
                             .from('messages')
-                            .select(`*, profiles:user_id(full_name, email)`)
+                            .select(`*, profiles:user_id(full_name, email, avatar_url)`)
                             .eq('id', newMessage.id)
                             .single();
                         if (data) {
