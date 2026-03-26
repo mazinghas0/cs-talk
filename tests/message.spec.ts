@@ -46,12 +46,12 @@ test.describe('message', () => {
     const ticketItem = await waitForTicketInList(page, title);
     await ticketItem.click();
 
-    // 메시지 전송
+    // 메시지 전송 (전송 버튼 클릭)
     const textarea = page.locator('.chat-input-area textarea').first();
     await expect(textarea).toBeVisible({ timeout: 10_000 });
     await textarea.click();
     await textarea.fill('우클릭 테스트 메시지');
-    await textarea.press('Enter');
+    await page.locator('.send-btn').click();
 
     // 메시지 버블 대기 (Realtime 지연 고려해 25초)
     const bubble = page.locator('.message-bubble').filter({ hasText: '우클릭 테스트 메시지' }).first();
