@@ -12,7 +12,8 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
-    const { user, allProfiles, fetchAllProfiles, updateUserRole, currentWorkspace, updateWorkspaceTags } = useAuthStore();
+    const { user, allProfiles, fetchAllProfiles, updateUserRole, currentWorkspace, updateWorkspaceTags, currentWorkspaceRole } = useAuthStore();
+    const canManageTags = currentWorkspaceRole === 'leader' || currentWorkspace?.owner_id === user?.id;
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -107,8 +108,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                     <AIBriefing />
                 </div>
 
-                {/* 태그 관리 */}
-                <div className="admin-tag-section">
+                {/* 태그 관리 — 소유자 또는 리더만 표시 */}
+                {canManageTags && <div className="admin-tag-section">
                     <div className="admin-section-title">
                         <Tag size={14} />
                         <span>태그 관리</span>
@@ -146,7 +147,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                         </button>
                     </div>
                     {tagError && <p className="admin-tag-error">{tagError}</p>}
-                </div>
+                </div>}
 
                 {/* Search */}
                 <div className="admin-search">
