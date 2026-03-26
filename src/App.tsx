@@ -1,8 +1,9 @@
-import { useEffect, lazy, Suspense } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import { MainLayout } from './components/layout/MainLayout'
 import { AuthView } from './components/auth/AuthView'
 import { OnboardingView } from './components/onboarding/OnboardingView'
+import { WelcomeTour } from './components/onboarding/WelcomeTour'
 import { useAuthStore } from './store/authStore'
 import { useTicketStore } from './store/ticketStore'
 
@@ -17,8 +18,11 @@ const PageLoading = () => (
   <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-secondary)' }}>Loading...</div>
 )
 
+const TOUR_KEY = 'cs_talk_tour_done'
+
 function AuthenticatedApp() {
   const { session, isLoading, initialize, profile, currentWorkspace } = useAuthStore()
+  const [tourDone, setTourDone] = useState(() => !!localStorage.getItem(TOUR_KEY))
   const { subscribeToChanges } = useTicketStore()
   const navigate = useNavigate()
 
@@ -59,6 +63,13 @@ function AuthenticatedApp() {
 
   if (!profile.full_name || profile.full_name.trim() === '') {
     return <OnboardingView />
+  }
+
+  if (!tourDone) {
+    return <WelcomeTour onComplete={() => {
+      localStorage.setItem(TOUR_KEY, '1')
+      setTourDone(true)
+    }} />
   }
 
   return <MainLayout />
