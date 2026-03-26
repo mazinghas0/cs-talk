@@ -48,6 +48,7 @@ interface AuthStore {
     joinWorkspaceByCode: (code: string) => Promise<Workspace>;
     deleteWorkspace: (workspaceId: string) => Promise<void>;
     uploadAvatar: (file: File) => Promise<void>;
+    updateWorkspaceTags: (workspaceId: string, tags: string[]) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -398,5 +399,21 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         const avatarUrl = `${data.publicUrl}?t=${Date.now()}`;
 
         await get().updateProfile({ avatar_url: avatarUrl });
+    },
+
+    updateWorkspaceTags: async (workspaceId, tags) => {
+        const { error } = await supabase
+            .from('workspaces')
+            .update({ tags })
+            .eq('id', workspaceId);
+
+        if (error) throw error;
+
+        set((state) => ({
+            workspaces: state.workspaces.map(w => w.id === workspaceId ? { ...w, tags } : w),
+            currentWorkspace: state.currentWorkspace?.id === workspaceId
+                ? { ...state.currentWorkspace, tags }
+                : state.currentWorkspace,
+        }));
     },
 }));

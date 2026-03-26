@@ -12,11 +12,12 @@ import { TicketFilterBar } from './TicketFilterBar';
 import { TicketCreateModal } from './TicketCreateModal';
 import { TicketEditModal } from './TicketEditModal';
 
-const TICKET_TAGS = ['출고', '배송', '반품', '환불', '교환', '재고', '결제', '인사', '기타'];
+const DEFAULT_TAGS = ['출고', '배송', '반품', '환불', '교환', '재고', '결제', '인사', '기타'];
 
 export const TicketList: React.FC = () => {
     const { tickets, activeTab, selectedTicketId, setSelectedTicketId, fetchTickets, createTicket, deleteTicket, updateTicket, updateTicketStatus, isLoadingData, unreadCounts } = useTicketStore();
     const { user, currentWorkspace, currentWorkspaceRole, workspaceMembers } = useAuthStore();
+    const ticketTags = currentWorkspace?.tags ?? DEFAULT_TAGS;
 
     // 생성 모달 state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -178,7 +179,7 @@ export const TicketList: React.FC = () => {
             <TicketTabs />
             <TicketSearchBar value={searchQuery} onChange={setSearchQuery} onClear={() => setSearchQuery('')} />
             <TicketFilterBar
-                ticketTags={TICKET_TAGS}
+                ticketTags={ticketTags}
                 showFilterBar={showFilterBar}
                 activeFilterCount={activeFilterCount}
                 filterPriority={filterPriority}
@@ -237,7 +238,7 @@ export const TicketList: React.FC = () => {
                 assigneeId={newAssigneeId}
                 images={newImages}
                 isSubmitting={isSubmitting}
-                ticketTags={TICKET_TAGS}
+                ticketTags={ticketTags}
                 workspaceMembers={workspaceMembers}
                 onClose={() => setIsModalOpen(false)}
                 onSubmit={handleCreateSubmit}
@@ -257,7 +258,7 @@ export const TicketList: React.FC = () => {
                 tags={editTags}
                 assigneeId={editAssigneeId}
                 isSubmitting={isEditSubmitting}
-                ticketTags={TICKET_TAGS}
+                ticketTags={ticketTags}
                 workspaceMembers={workspaceMembers}
                 onClose={() => setEditingTicket(null)}
                 onSubmit={handleEditSubmit}

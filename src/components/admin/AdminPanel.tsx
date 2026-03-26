@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { X, Shield, Search, Loader2 } from 'lucide-react';
+import { X, Shield, Search, Loader2, Plus, Tag } from 'lucide-react';
 import { AIBriefing } from './AIBriefing';
 import './AdminPanel.css';
+
+const DEFAULT_TAGS = ['출고', '배송', '반품', '환불', '교환', '재고', '결제', '인사', '기타'];
 
 interface AdminPanelProps {
     isOpen: boolean;
@@ -10,11 +12,47 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
-    const { user, allProfiles, fetchAllProfiles, updateUserRole } = useAuthStore();
+    const { user, allProfiles, fetchAllProfiles, updateUserRole, currentWorkspace, updateWorkspaceTags } = useAuthStore();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+    const [newTagInput, setNewTagInput] = useState('');
+    const [tagError, setTagError] = useState<string | null>(null);
+    const [isSavingTag, setIsSavingTag] = useState(false);
+
+    const currentTags = currentWorkspace?.tags ?? DEFAULT_TAGS;
+
+    const handleAddTag = async () => {
+        const tag = newTagInput.trim();
+        if (!tag) return;
+        if (currentTags.includes(tag)) {
+            setTagError('이미 존재하는 태그입니다.');
+            return;
+        }
+        if (!currentWorkspace) return;
+        setIsSavingTag(true);
+        setTagError(null);
+        try {
+            await updateWorkspaceTags(currentWorkspace.id, [...currentTags, tag]);
+            setNewTagInput('');
+        } catch {
+            setTagError('저장에 실패했습니다.');
+        } finally {
+            setIsSavingTag(false);
+        }
+    };
+
+    const handleRemoveTag = async (tag: string) => {
+        if (!currentWorkspace) return;
+        const updated = currentTags.filter(t => t !== tag);
+        try {
+            await updateWorkspaceTags(currentWorkspace.id, updated);
+        } catch {
+            setTagError('삭제에 실패했습니다.');
+        }
+    };
 
     useEffect(() => {
         if (!isOpen) return;
@@ -67,6 +105,47 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                 {/* AI Briefing Section (Premium) */}
                 <div style={{ padding: '0 1.5rem 1.5rem 1.5rem' }}>
                     <AIBriefing />
+                </div>
+
+                {/* 태그 관리 */}
+                <div className="admin-tag-section">
+                    <div className="admin-section-title">
+                        <Tag size={14} />
+                        <span>태그 관리</span>
+                    </div>
+                    <div className="admin-tag-list">
+                        {currentTags.map(tag => (
+                            <span key={tag} className="admin-tag-chip">
+                                {tag}
+                                <button
+                                    className="admin-tag-remove"
+                                    onClick={() => handleRemoveTag(tag)}
+                                    aria-label={`${tag} 삭제`}
+                                >
+                                    <X size={11} />
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                    <div className="admin-tag-input-row">
+                        <input
+                            type="text"
+                            className="admin-tag-input"
+                            placeholder="새 태그 입력"
+                            value={newTagInput}
+                            onChange={e => { setNewTagInput(e.target.value); setTagError(null); }}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
+                            maxLength={10}
+                        />
+                        <button
+                            className="admin-tag-add-btn"
+                            onClick={handleAddTag}
+                            disabled={!newTagInput.trim() || isSavingTag}
+                        >
+                            {isSavingTag ? <Loader2 size={14} className="spin" /> : <Plus size={14} />}
+                        </button>
+                    </div>
+                    {tagError && <p className="admin-tag-error">{tagError}</p>}
                 </div>
 
                 {/* Search */}
