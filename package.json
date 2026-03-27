@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@dicebear/collection": "^9.4.2",
+    "@dicebear/core": "^9.4.2",
     "@supabase/supabase-js": "^2.98.0",
     "browser-image-compression": "^2.0.2",
     "clsx": "^2.1.1",
