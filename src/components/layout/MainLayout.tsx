@@ -15,7 +15,7 @@ import { useLayoutState, STATUS_LABEL } from '../../hooks/useLayoutState';
 
 export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     const { selectedTicketId, setSelectedTicketId, fetchTickets } = useTicketStore();
-    const { isAdmin, workspaces, currentWorkspace, isLoading, joinWorkspaceByCode, currentWorkspaceRole, user, profile } = useAuthStore();
+    const { isAdmin, workspaces, currentWorkspace, isLoading, joinWorkspaceByCode, currentWorkspaceRole, user } = useAuthStore();
 
     const {
         isSettingsOpen, setIsSettingsOpen,
@@ -169,19 +169,13 @@ export const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children 
                             {isDarkMode ? <Sun size={20} color="var(--accent-warning)" /> : <Moon size={20} color="var(--accent-primary)" />}
                             <span className="sidebar-tooltip">{isDarkMode ? '라이트 모드' : '다크 모드'}</span>
                         </div>
-                        <div className={`sidebar-btn sidebar-profile-btn${isSettingsOpen ? ' active' : ''}`} onClick={() => setIsSettingsOpen(true)}>
-                            <UserCircle size={30} color="var(--text-primary)" style={{ flexShrink: 0 }} />
+                        <div className={`sidebar-btn${isSettingsOpen ? ' active' : ''}`} onClick={() => setIsSettingsOpen(true)}>
+                            <UserCircle size={30} color="var(--text-primary)" />
                             <span
                                 className={`status-dot ${userStatus}`}
                                 title={STATUS_LABEL[userStatus]}
                                 onClick={(e) => { e.stopPropagation(); cycleStatus(); }}
                             />
-                            {sidebarWidth >= 100 && (
-                                <div className="sidebar-profile-info">
-                                    <span className="sidebar-profile-name">{profile?.full_name || user?.email?.split('@')[0] || '나'}</span>
-                                    <span className="sidebar-profile-email">{user?.email || ''}</span>
-                                </div>
-                            )}
                             <span className="sidebar-tooltip">프로필 설정 ({STATUS_LABEL[userStatus]})</span>
                         </div>
                     </div>

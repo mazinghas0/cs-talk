@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { X, Save, User as UserIcon, Bell, BellOff, LogOut, Camera, Volume2, VolumeX } from 'lucide-react';
+import { X, Save, Bell, BellOff, LogOut, Camera, Volume2, VolumeX } from 'lucide-react';
 import { subscribeUserToPush } from '../../utils/pushNotification';
 import { getNotifSettings, saveNotifSettings, previewSound, SoundType } from '../../utils/notificationSettings';
 import './ProfileSettings.css';
@@ -99,12 +99,21 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ isOpen, onClos
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content profile-settings-modal" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                    <div className="header-title">
-                        <div className="profile-icon-wrapper">
-                            <UserIcon size={24} />
+                <div className="modal-header profile-identity-header">
+                    <div className="profile-identity-card">
+                        <div className="profile-identity-avatar">
+                            {(avatarPreview || profile?.avatar_url) ? (
+                                <img src={avatarPreview ?? profile?.avatar_url ?? ''} alt="프로필" className="avatar-img" />
+                            ) : (
+                                <span className="avatar-initial">
+                                    {(profile?.full_name ?? profile?.email ?? '?').substring(0, 1).toUpperCase()}
+                                </span>
+                            )}
                         </div>
-                        <h3>내 프로필 수정</h3>
+                        <div className="profile-identity-info">
+                            <span className="profile-identity-name">{profile?.full_name || '이름 미설정'}</span>
+                            <span className="profile-identity-email">{profile?.email || user?.email || ''}</span>
+                        </div>
                     </div>
                     <button className="icon-btn-close" onClick={onClose}><X size={20} /></button>
                 </div>
